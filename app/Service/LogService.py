@@ -5,7 +5,7 @@
 @LastEditors  : hua
 @LastEditTime : 2019-12-18 14:17:28
 '''
-from app.Models.Model import HtLog
+from app.Models import Log
 from app import db
 import time
 
@@ -28,7 +28,7 @@ class LogService:
             'create_time': int(time.time())
         }
         try:
-            log = HtLog(**data)
+            log = Log(**data)
             db.session.add(log)
             db.session.flush()
             id = log.id

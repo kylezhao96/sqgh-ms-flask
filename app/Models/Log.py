@@ -8,12 +8,18 @@
 from app import db
 from sqlalchemy import desc, asc, Column, Integer, FetchedValue, Text
 from app.Models.BaseModel import BaseModel
-from app.Models.Model import HtLog
 from sqlalchemy_serializer import SerializerMixin
 from app.Vendor.Decorator import classTransaction
 
 
-class Log(HtLog, BaseModel, SerializerMixin):
+class Log(db.Model, BaseModel, SerializerMixin):
+    __tablename__ = 'logs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.Integer, nullable=False)
+    level = db.Column(db.Integer, nullable=False)
+    data = db.Column(db.Text, nullable=False)
+    create_time = db.Column(db.Integer, nullable=False)
 
     def getOne(self, filters, order='id desc', field=()):
         res = db.session.query(Log).filter(*filters)

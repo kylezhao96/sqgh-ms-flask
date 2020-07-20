@@ -11,12 +11,27 @@ from sqlalchemy_serializer import SerializerMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app.Models.BaseModel import BaseModel
-from app.Models.Model import HtUser
 from app import db
 from app.Vendor.Decorator import classTransaction
 
 
-class User(HtUser, BaseModel, SerializerMixin):
+class User(db.Model, BaseModel, SerializerMixin):
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    name = db.Column(db.String(20), unique=True, nullable=False)
+    oa_account = db.Column(db.String(20), unique=True)
+    oa_password = db.Column(db.String(100))
+    company = db.Column(db.String(100))
+    status = db.Column(db.Integer)
+    remember_token = db.Column(db.String(200, 'utf8_unicode_ci'))
+    created_at = db.Column(db.Integer)
+    updated_at = db.Column(db.Integer)
+    role_id = db.Column(db.String(100, 'utf8_unicode_ci'))
+    role_name = db.Column(db.String(100, 'utf8_unicode_ci'))
+    role_creator_id = db.Column(db.String(100, 'utf8_unicode_ci'))
+    role_create_time = db.Column(db.Integer)
+    role_status = db.Column(db.Integer)
     #
     # serialize_rules = ('-password',)
     # 描述suggest表关系，第一个参数是参照类,要引用的表，
@@ -81,3 +96,13 @@ class User(HtUser, BaseModel, SerializerMixin):
     def update(id, updated_at, token):
         db.session.query(User).filter_by(id=id).update({'updated_at': updated_at, 'remember_token': token})
         return db.session.commit()
+
+    # 根据姓名获取用户
+    def getByName(self, name):
+        if not User.query.filter_by(name=name).first():
+            manager = User()
+            manager.name = name
+            User().add(manager)
+            return manager
+        else:
+            return User.query.filter_by(name=name).first()

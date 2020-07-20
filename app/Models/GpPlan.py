@@ -3,10 +3,17 @@ import calendar
 from sqlalchemy_serializer import SerializerMixin
 
 from app.Models.BaseModel import BaseModel
-from app.Models.Model import HtGpPlan
+from app import db
 
+class GpPlan(db.Model, BaseModel, SerializerMixin):
+    __tablename__ = 'gpplans'
 
-class GpPlan(HtGpPlan, BaseModel, SerializerMixin):
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    year = db.Column(db.Integer, nullable=False)
+    month = db.Column(db.Integer, nullable=False)
+    num = db.Column(db.Integer, nullable=False)
+    plan_gp = db.Column(db.Integer, nullable=False)
+
     @staticmethod
     def getGpPlan(year, month=0, day=0, num=0):
         res = 0

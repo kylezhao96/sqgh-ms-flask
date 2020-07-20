@@ -54,7 +54,7 @@ if environment == 'socket':
         return ExceptionApi(Code.ERROR, e)
 # 引入使用的控制器
 if environment == 'run' or environment == 'restful':
-    from app.Controllers import UsersController, RestfulController, AdminController, CdfController, AuthController
+    from app.Controllers import UsersController, RestfulController, AdminController, CdfController, AuthController, GzpController
     # 蓝图，新增的后台部分代码
     from app.Controllers.AdminController import admin
     from app.Controllers.AuthController import auth
