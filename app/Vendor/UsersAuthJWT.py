@@ -81,7 +81,7 @@ class UsersAuthJWT():
             if User.check_password(userInfoPas['oa_password'], oa_password):
                 updated_at = int(time.time())
                 token = UsersAuthJWT.encode_auth_token(userInfo['id'], updated_at)
-                User.update(userInfo['id'], updated_at, token.decode())
+                User.update(userInfo['id'], remember_token=token.decode(), updated_at=updated_at)
                 return BaseController().successData({'token': token.decode(), 'user': userInfo}, '登陆成功')
             else:
                 return BaseController().error('密码不正确')

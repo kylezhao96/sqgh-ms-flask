@@ -5,6 +5,7 @@
 @LastEditors: kyle
 @LastEditTime: 2020-06-19 20:56
 """
+import time
 
 from sqlalchemy import desc, asc
 from sqlalchemy_serializer import SerializerMixin
@@ -24,12 +25,12 @@ class User(db.Model, BaseModel, SerializerMixin):
     oa_password = db.Column(db.String(100))
     company = db.Column(db.String(100))
     status = db.Column(db.Integer)
-    remember_token = db.Column(db.String(200, 'utf8_unicode_ci'))
+    remember_token = db.Column(db.String(200))
     created_at = db.Column(db.Integer)
     updated_at = db.Column(db.Integer)
-    role_id = db.Column(db.String(100, 'utf8_unicode_ci'))
-    role_name = db.Column(db.String(100, 'utf8_unicode_ci'))
-    role_creator_id = db.Column(db.String(100, 'utf8_unicode_ci'))
+    role_id = db.Column(db.String(100))
+    role_name = db.Column(db.String(100))
+    role_creator_id = db.Column(db.String(100))
     role_create_time = db.Column(db.Integer)
     role_status = db.Column(db.Integer)
     #
@@ -60,7 +61,10 @@ class User(db.Model, BaseModel, SerializerMixin):
         if res == None:
             return None
         if not field:
-            res = res.to_dict()
+            field = ('id', 'name', 'oa_account', 'oa_password', 'company', 'status', 'remember_token', 'created_at',
+                     'updated_at',
+                     'role_id', 'role_name', 'role_create_time', 'role_status')
+            res = res.to_dict(only=field)
         else:
             res = res.to_dict(only=field)
         return res
@@ -86,16 +90,35 @@ class User(db.Model, BaseModel, SerializerMixin):
         db.session.add(user)
         return True
 
+    # 修改用户
+    @staticmethod
+    def update(id, oa_account=(), oa_password=(), company=(), status=(), created_at=(), role_id=(), updated_at=(),
+               role_name=(), role_create_time=(), role_creator_id=(), role_status=(), remember_token=()):
+        user = db.session.query(User).filter_by(id=id).first()
+        user.oa_account = oa_account if oa_account else user.oa_account
+        user.oa_password = User.set_password(oa_password) if oa_password else user.oa_password
+        user.company = company if company else user.company,
+        user.status = status if status else user.status,
+        user.created_at = created_at if created_at else user.created_at,
+        user.role_id = role_id if role_id else user.role_id,
+        user.role_name = role_name if role_name else user.role_name,
+        user.role_create_time = role_create_time if role_create_time else user.role_create_time,
+        user.role_creator_id = role_creator_id if role_creator_id else user.role_creator_id,
+        user.role_status = role_status if role_status else user.role_status
+        user.updated_at = int(time.time()) if updated_at else user.updated_at
+        user.remember_token = remember_token if remember_token else user.remember_token
+        return db.session.commit()
+
     # 根据id删除用户
     def delete(self, id):
         self.query.filter_by(id=id).delete()
         return db.session.commit()
 
-    # 更新更新时间
-    @staticmethod
-    def update(id, updated_at, token):
-        db.session.query(User).filter_by(id=id).update({'updated_at': updated_at, 'remember_token': token})
-        return db.session.commit()
+    # # 更新更新时间
+    # @staticmethod
+    # def update(id, updated_at, token):
+    #     db.session.query(User).filter_by(id=id).update({'updated_at': updated_at, 'remember_token': token})
+    #     return db.session.commit()
 
     # 根据姓名获取用户
     def getByName(self, name):

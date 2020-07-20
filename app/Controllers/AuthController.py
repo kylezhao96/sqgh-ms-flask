@@ -33,7 +33,6 @@ def logout():
     return BaseController().successData(msg='登出成功')
 
 
-
 @auth.route('/register', methods=['POST'])
 def register():
     """ 注册 """
@@ -42,7 +41,7 @@ def register():
     company = request.json.get('company')
     name = request.json.get('name')
     filters = {
-        User.oa_account == oa_account
+        User.name == name
     }
     user_data = User().getOne(filters)
     if user_data is None:
@@ -64,4 +63,9 @@ def register():
         if status:
             return BaseController().successData(result={'name': name}, msg='注册成功')
         return BaseController().error('注册失败')
+    # else:
+    #     user = User.get(user_data['id'])
+    #     create_time = int(time.time())
+    #     User().update(user, oa_account, User.set_password(oa_password), company, 1, create_time, 'admin', '管理员',
+    #                   create_time, 'default', 1)
     return BaseController().error('账号已注册')

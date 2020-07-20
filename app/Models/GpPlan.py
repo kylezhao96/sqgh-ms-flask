@@ -4,6 +4,7 @@ from sqlalchemy_serializer import SerializerMixin
 
 from app.Models.BaseModel import BaseModel
 from app import db
+from app.Vendor.Decorator import classTransaction
 
 class GpPlan(db.Model, BaseModel, SerializerMixin):
     __tablename__ = 'gpplans'
@@ -13,6 +14,11 @@ class GpPlan(db.Model, BaseModel, SerializerMixin):
     month = db.Column(db.Integer, nullable=False)
     num = db.Column(db.Integer, nullable=False)
     plan_gp = db.Column(db.Integer, nullable=False)
+
+    @classTransaction
+    def add(self, gpplan):
+        db.session.add(gpplan)
+        return True
 
     @staticmethod
     def getGpPlan(year, month=0, day=0, num=0):

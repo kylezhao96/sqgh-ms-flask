@@ -186,3 +186,27 @@ def get_cdfs_by_timerange():
     result = CalDailyForm().getList(filters, CalDailyForm.date.desc(), ('dgp', 'davgs', 'date', 'mgp', 'agp'), 0, 31)[
         'list']
     return BaseController().successData(result=result, msg='获取成功')
+
+
+@app.route('/api/gpplans', methods=['PUT'])
+def get_gp_plans():
+    """
+    自动化对发电量计划进行读取
+    """
+    gpplan = pd.read_excel(r"C:\Users\admin\Desktop\1报表文件夹\日报表\2020年\山东分公司2020年发电量计划（2020.5调整版）.xlsx",
+                           usecols=range(14), skiprows=range(1))
+    gpplan.fillna(0)
+    print(gpplan)
+    year = 2020
+    for x in range(40):
+        if gpplan.loc[x].values[0] == '合计':
+            break
+        if gpplan.loc[x].values[0] == '石桥一期':
+            for col_num in range(1, 13):
+                gpp = GpPlan(year=year, month=col_num, num=1, plan_gp=int(gpplan.loc[x].values[col_num]))
+                GpPlan().add(gpp)
+        if gpplan.loc[x].values[0] == '石桥二期':
+            for col_num in range(1, 13):
+                gpp = GpPlan(year=year, month=col_num, num=2, plan_gp=int(gpplan.loc[x].values[col_num]))
+                GpPlan().add(gpp)
+    return BaseController().successData(msg='读取并写入成功！')
