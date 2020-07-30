@@ -58,23 +58,57 @@ class Gzp(db.Model, BaseModel, SerializerMixin):
                           lazy="dynamic")  # 风机号
 
 
+    def to_dict(self, only=()):
+        resp_dict = {
+            'id': self.id,
+            'wtms': [{'id': x.id, 'wt_id': x.wt_id, 'stop_time': x.stop_time, 'start_time': x.start_time,
+                      'lost_power': x.lost_power, 'time': x.time} for x in self.wtms],
+            'gzp_id': self.gzp_id,
+            'firm': self.firm,
+            'pstart_time': self.pstart_time,
+            'pstop_time': self.pstop_time,
+            'error_code': self.error_code,
+            'error_content': self.error_content,
+            'task': self.task,
+            'postion': self.postion,
+            'sign_time': self.sign_time,
+            'allow1_time': self.allow1_time,
+            'end1_time': self.end1_time,
+            'allow2_time': self.allow2_time,
+            'end2_time': self.end2_time,
+            'is_end': self.is_end,
+            'sign_person_id': self.sign_person_id,
+            'manage_person_id': self.manage_person_id,
+            'allow1_person_id': self.allow1_person_id,
+            'allow2_person_id': self.allow2_person_id,
+            'members': [{'id': x.id, 'name': x.name} for x in self.members],
+            'wts': [x.id for x in self.wts]
+        }
+        if only:
+            resp_dict = {k: v for k, v in resp_dict.items() if k in only}
+        return resp_dict
+
     def getGzpList(self, page, per_page):
-
         data = self.getList({}, Gzp.pstart_time.desc(), (), page, per_page)
-
         return data
 
-    """ 
-        列表
-        @param set filters 查询条件
-        @param obj order 排序
-        @param tuple field 字段
-        @param int offset 偏移量
-        @param int limit 取多少条
-        @return dict
-    """
+    def getGzpModelList(self, page, per_page):
+        return self.getModelList({}, Gzp.pstart_time.desc(), page, per_page)
+
+    def getFirmList(self, filters):
+        res = db.session.query(Gzp.firm).filter(*filters).distinct().all()
+        return [x[0] for x in res]
 
     def getList(self, filters, order, field=(), offset=0, limit=15):
+        """
+            列表
+            @param set filters 查询条件
+            @param obj order 排序
+            @param tuple field 字段
+            @param int offset 偏移量
+            @param int limit 取多少条
+            @return dict
+        """
         res = {}
         res['page'] = {}
         res['page']['count'] = db.session.query(Gzp).filter(*filters).count()
@@ -91,6 +125,20 @@ class Gzp(db.Model, BaseModel, SerializerMixin):
             res['list'] = [c.to_dict() for c in res['list']]
         else:
             res['list'] = [c.to_dict(only=field) for c in res['list']]
+        return res
+
+    def getModelList(self, filters, order, offset=0, limit=15):
+        res = {}
+        res['page'] = {}
+        res['page']['count'] = db.session.query(Gzp).filter(*filters).count()
+        res['list'] = []
+        res['page']['total_page'] = self.get_page_number(res['page']['count'], limit)
+        res['page']['current_page'] = offset
+        if offset != 0:
+            offset = (offset - 1) * limit
+        if res['page']['count'] > 0:
+            res['list'] = db.session.query(Gzp).filter(*filters)
+            res['list'] = res['list'].order_by(order).offset(offset).limit(limit).all()
         return res
 
     @staticmethod

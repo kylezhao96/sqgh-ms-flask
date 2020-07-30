@@ -7,7 +7,7 @@
 from app import app
 from app.Controllers.BaseController import BaseController
 from app.Vendor.Utils import Utils
-from app.Models import User
+from app.Models import User, Gzp
 from app.Service.TableService import TableService
 from app.Models.Log import Log
 from app.Vendor.UsersAuthJWT import UsersAuthJWT
@@ -30,8 +30,8 @@ def index():
 @app.route('/api/users', methods=['GET'])
 def get_users():
     res = []
-    companys1 = User().getAll(User, {User.company == '石桥子风电场'})
-    companys2 = User().getAll(User, {User.company != '石桥子风电场'})
+    companys1 = User().getAll(User, {User.company == '石桥子风电场'}, field=('name', 'company'))
+    companys2 = User().getAll(User, {User.company != '石桥子风电场' or User.company is None}, field=('name', 'company'))
     if companys1:
         res.append({
             'label': '石桥子风电场',
@@ -70,7 +70,6 @@ def getInfo():
     user_info = User().getOne(filters=filters, field=field)
     if not user_info:
         return BaseController().error(msg='查询失败')
-    print(user_info)
     user_info['role'] = {
         'id': user_info['role_id'],
         'status': user_info['role_status'],
@@ -80,3 +79,26 @@ def getInfo():
     }
     del user_info['role_creator_id'], user_info['role_create_time'], user_info['role_status']
     return BaseController().successData(result=user_info, msg='获取成功')
+
+
+@app.route('/api/users', methods=['POST'])
+def search_users():
+    data = request.get_json() or ''
+    res = set()
+    if data:
+        res_list = User().getList(User, {User.name.contains(data['value'])}, field=('name',))['list']
+        users_name = [x['name'] for x in res_list]
+        if len(users_name) == 0:
+            res.add(data['value'])
+        res.update(users_name)
+
+    else:
+        res_list = Gzp().getList({}, order=Gzp.gzp_id.desc(), field=('manage_person_id', 'members'), offset=0, limit=5)[
+            'list']
+        for item in res_list:
+            manager_person_name = User().getOne(filters={User.id == item['manage_person_id']}, field=('name',))['name']
+            members_name = [User().getOne(filters={User.id == x['id']}, field=('name',))['name'] for x in
+                            item['members']]
+            res.add(manager_person_name)
+            res.update(members_name)
+    return BaseController().successData(result=list(res))

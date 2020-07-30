@@ -7,10 +7,11 @@
 """
 import time
 
-from sqlalchemy import desc, asc
+from sqlalchemy import desc, asc, func, inspect
 from sqlalchemy_serializer import SerializerMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from app.Models import Gzp
 from app.Models.BaseModel import BaseModel
 from app import db
 from app.Vendor.Decorator import classTransaction
@@ -33,23 +34,6 @@ class User(db.Model, BaseModel, SerializerMixin):
     role_creator_id = db.Column(db.String(100))
     role_create_time = db.Column(db.Integer)
     role_status = db.Column(db.Integer)
-    #
-    # serialize_rules = ('-password',)
-    # 描述suggest表关系，第一个参数是参照类,要引用的表，
-    # 第二个参数是backref为类Suggest申明的新方法，backref为定义反向引用，
-    # 第三个参数lazy是决定什么时候sqlalchemy从数据库中加载数据
-    # 这里缺少外键，暂不展开
-    # suggest = db.relationship('Suggest')
-
-    """  def __str__(self):
-        return "User(id='%s')" % self.id """
-    """
-        获取一条
-        @param set filters 查询条件
-        @param obj order 排序
-        @param tuple field 字段
-        @return dict
-    """
 
     def getOne(self, filters, order='id desc', field=()):
         res = db.session.query(User).filter(*filters)
@@ -61,9 +45,7 @@ class User(db.Model, BaseModel, SerializerMixin):
         if res == None:
             return None
         if not field:
-            field = ('id', 'name', 'oa_account', 'oa_password', 'company', 'status', 'remember_token', 'created_at',
-                     'updated_at',
-                     'role_id', 'role_name', 'role_create_time', 'role_status')
+            field = inspect(User).c.keys()
             res = res.to_dict(only=field)
         else:
             res = res.to_dict(only=field)
@@ -129,3 +111,5 @@ class User(db.Model, BaseModel, SerializerMixin):
             return manager
         else:
             return User.query.filter_by(name=name).first()
+
+

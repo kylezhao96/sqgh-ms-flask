@@ -6,13 +6,15 @@
 @LastEditTime: 2019-11-28 20:20:54
 '''
 from app.Vendor.Code import Code
-from sqlalchemy import desc, asc
-from app import  db
+from sqlalchemy import desc, asc, inspect
+from app import db
 import math
 
+
 class BaseModel():
-    
-    def getList(self, cls_:object, filters:set, order:str="id desc", field:tuple=(), offset:int = 0, limit:int = 15)->dict:
+
+    def getList(self, cls_: object, filters: set, order: str = "id desc", field: tuple = (), offset: int = 0,
+                limit: int = 15) -> dict:
         """ 
         列表
         @param object cls_ 数据库模型实体类
@@ -24,7 +26,7 @@ class BaseModel():
         @return dict
         """
         res = {}
-        res['page'] ={}
+        res['page'] = {}
         res['page']['count'] = db.session.query(cls_).filter(*filters).count()
         res['list'] = []
         res['page']['total_page'] = self.get_page_number(res['page']['count'], limit)
@@ -40,12 +42,13 @@ class BaseModel():
             else:
                 res['list'] = res['list'].order_by(asc(orderArr[0])).offset(offset).limit(limit).all()
         if not field:
-            res['list'] = [c.to_dict() for c in res['list']]
+            field = inspect(cls_).c.keys()
+            res['list'] = [c.to_dict(only=field) for c in res['list']]
         else:
             res['list'] = [c.to_dict(only=field) for c in res['list']]
         return res
 
-    def getAll(self, cls_:object, filters:set, order:str = 'id desc', field:tuple = (), limit:int = 0)->list:
+    def getAll(self, cls_: object, filters: set, order: str = 'id desc', field: tuple = (), limit: int = 0) -> list:
         """
         查询全部
         @param object cls_ 数据库模型实体类
@@ -57,7 +60,7 @@ class BaseModel():
         """
         if not filters:
             res = db.session.query(cls_)
-        else:   
+        else:
             res = db.session.query(cls_).filter(*filters)
         if limit != 0:
             res = res.limit(limit)
@@ -67,12 +70,13 @@ class BaseModel():
         else:
             res = res.order_by(asc(orderArr[0])).all()
         if not field:
-            res = [c.to_dict() for c in res]
+            field = inspect(cls_).c.keys()
+            res = [c.to_dict(only=field) for c in res]
         else:
             res = [c.to_dict(only=field) for c in res]
         return res
 
-    def getOne(self, cls_:object, filters:set, order:str = 'id desc', field :tuple= ()):
+    def getOne(self, cls_: object, filters: set, order: str = 'id desc', field: tuple = ()):
         """
         获取一条
         @param object cls_ 数据库模型实体类
@@ -90,12 +94,12 @@ class BaseModel():
         if res == None:
             return None
         if not field:
-            res = res.to_dict() 
+            res = res.to_dict()
         else:
-           res = res.to_dict(only=field) 
+            res = res.to_dict(only=field)
         return res
-  
-    def add(self, cls_, data:dict)->int:
+
+    def add(self, cls_, data: dict) -> int:
         """
         添加
         @param object cls_ 数据库模型实体类
@@ -107,7 +111,7 @@ class BaseModel():
         db.session.flush()
         return users.id
 
-    def edit(self, cls_:object, data:dict, filters:set)->bool:
+    def edit(self, cls_: object, data: dict, filters: set) -> bool:
         """
         修改
         @param object cls_ 数据库模型实体类
@@ -116,8 +120,8 @@ class BaseModel():
         @return bool
         """
         return db.session.query(cls_).filter(*filters).update(data, synchronize_session=False)
-    
-    def delete(self, cls_:object, filters:set)->int:
+
+    def delete(self, cls_: object, filters: set) -> int:
         """
         删除
         @param object cls_ 数据库模型实体类
@@ -125,22 +129,22 @@ class BaseModel():
         @return int
         """
         return db.session.query(cls_).filter(*filters).delete(synchronize_session=False)
-    
-    def getCount(self, cls_:object, filters:set, field = None)->int:
+
+    def getCount(self, cls_: object, filters: set, field=None) -> int:
         """
         统计数量
         @param object cls_ 数据库模型实体类
         @param set filters 条件
         @param obj field 字段
         @return int
-        """  
+        """
         if field == None:
             return db.session.query(cls_).filter(*filters).count()
         else:
             return db.session.query(cls_).filter(*filters).count(field)
-        
+
     @staticmethod
-    def get_page_number(count:int, page_size:int)->int:
+    def get_page_number(count: int, page_size: int) -> int:
         """ 
         * 获取总页数
         * @param int count 
@@ -161,6 +165,7 @@ class BaseModel():
     * @param int total
     * @return dict 
     """
+
     @staticmethod
     def formatPaged(page, size, total):
         if int(total) > int(page) * int(size):
@@ -179,6 +184,7 @@ class BaseModel():
     * @param dict data
     * @return dict
     """
+
     @staticmethod
     def formatBody(data={}, msg='', show=True):
         dataformat = {}
@@ -194,6 +200,7 @@ class BaseModel():
     * @param string message
     * @return dict
     """
+
     @staticmethod
     def formatError(code, message='', show=True):
         if code == Code.BAD_REQUEST:
@@ -206,7 +213,3 @@ class BaseModel():
         body['msg'] = message
         body['show'] = show
         return body
-
-
-
-

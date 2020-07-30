@@ -21,62 +21,61 @@ def get_gzps_today():
     """
     读取今日工作票
     """
-    test_date = datetime.date(2020,1,1)
-    # datetime.date.today()
-    # gzps = Gzp().getList(
-    #     {},
-    #     Gzp.pstart_time.desc(),
-    #     ('gzp_id', 'manager', 'date', 'mgp', 'agp')
-    # )
-    gzps = Gzp().getGzpList(0, 20)
+    # test_date = datetime.date(2020,1,1)
+    gzps = Gzp().getList(
+        {Gzp.pstart_time >= datetime.date.today()},
+        Gzp.pstart_time.desc(),
+        ('gzp_id', 'manager', 'date', 'mgp', 'agp')
+    )
+    # gzps = Gzp().getGzpList(0, 10)
+    gzps_list = gzps['list']
     data = []
-    for item in gzps:
+    for item in gzps_list:
         members = ''
-        for member in item.members:
-            members = members + member.name + '，'
+        for member in item['members']:
+            members = members + member['name'] + '，'
         members = members[:-1]
         wts = ''
         wtms = list()
         index = 0
-        for wt in item.wts:
+        for wt_id in item['wts']:
             wtms.append({})
-            if WTMaintain.query.filter_by(gzp_id=item.gzp_id, wt_id=wt.id).first():
-                wtm = WTMaintain.query.filter_by(
-                    gzp_id=item.gzp_id, wt_id=wt.id).first()
+            if len(list(filter(lambda x: x['wt_id'] == wt_id, item['wtms']))):
+                wtm = list(filter(lambda x: x['wt_id'] == wt_id, item['wtms']))[0]
                 wtms[index] = {
-                    'wt_id': wt.id,
-                    'stop_time': datetime.datetime.strftime(wtm.stop_time, '%Y-%m-%d %H:%M'),
-                    'start_time': '' if not wtm.start_time else datetime.datetime.strftime(wtm.start_time,
-                                                                                           '%Y-%m-%d %H:%M'),
-                    'lost_power': wtm.lost_power,
-                    'time': wtm.time
+                    'wt_id': wt_id,
+                    'stop_time': datetime.datetime.strftime(wtm['stop_time'], '%Y-%m-%d %H:%M'),
+                    'start_time': '' if not wtm['start_time'] else datetime.datetime.strftime(wtm['start_time'],
+                                                                                              '%Y-%m-%d %H:%M'),
+                    'lost_power': wtm['lost_power'],
+                    'time': wtm['time']
                 }
             else:
                 wtms[index] = {
-                    'wt_id': wt.id,
+                    'wt_id': wt_id,
                     'stop_time': '',
                     'start_time': '',
                     'lost_power': '',
                     'time': ''
                 }
-            wts = wts + 'A' + str(wt.id) + '，'
+            wts = wts + 'A' + str(wt_id) + '，'
             index = index + 1
         wts = wts[:-1]
         x = {
-            'id': item.gzp_id,
+            'id': item['gzp_id'],
             'wt_id': wts,
-            'manager': User.query.filter_by(id=item.manage_person_id).first().name,
-            'task': item.task,
+            'manager': User().get(item['manage_person_id']).name,
+            'task': item['task'],
             'members': members,
-            'pstart_time': datetime.datetime.strftime(item.pstart_time, '%Y-%m-%d %H:%M'),
-            'pstop_time': datetime.datetime.strftime(item.pstop_time, '%Y-%m-%d %H:%M'),
+            'pstart_time': datetime.datetime.strftime(item['pstart_time'], '%Y-%m-%d %H:%M'),
+            'pstop_time': datetime.datetime.strftime(item['pstop_time'], '%Y-%m-%d %H:%M'),
             'wtms': wtms,
-            'is_end': item.is_end,
+            'is_end': item['is_end'],
         }
-        if item.error_code:
-            x['error_code'] = item.error_code
+        if item['error_code']:
+            x['error_code'] = item['error_code']
         data.append(x)
-        index = index + 1
+        # index = index + 1
     print(data)
     return BaseController().successData(result=data, msg='工作票读取成功')
 
@@ -331,3 +330,33 @@ def gzp_syn():
                                                 print(gzp.gzp_id)
                             Gzp().add(gzp)
     return res
+
+
+@app.route('/api/firms', methods=['POST'])
+def get_firms_today():
+    parms = request.get_json() or ''
+    filters = {}
+    if parms:
+        filters = {
+            Gzp.firm.contains(parms['value'])
+        }
+    return BaseController().successData(result=Gzp().getFirmList(filters))
+
+
+@app.route('/api/gzp/id/new', methods=['GET'])
+def get_new_gzp_id():
+    gzp_id_max = Gzp().getList({}, Gzp.gzp_id.desc(), ('gzp_id',),0,1)['list'][0]['gzp_id']
+    matchObj = re.search(r"(\d{4})(\d{2})(\d{3})",gzp_id_max )
+    year = int(matchObj.group(1))
+    month = int(matchObj.group(2))
+    id = int(matchObj.group(3))
+    today = datetime.date.today()
+    if year!= today.year or month!=today.month:
+        id = 1
+    else:
+        id = id+1
+    res = {
+        'gzp_id': 'FJGZ-SD-SQ'+str(today.year).zfill(4)+str(today.month).zfill(2)+str(id).zfill(3),
+        'gzp_id_num': str(today.year).zfill(4)+str(today.month).zfill(2)+str(id).zfill(3)
+    }
+    return BaseController().successData(result=res)

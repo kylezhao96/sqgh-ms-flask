@@ -110,4 +110,5 @@ class BaseController:
     '''
 
     def successData(self, result='', msg='', show=True):
+        print('返回信息' + msg + ' 返回数据' + str(result))
         return self.json({'error_code': Code.SUCCESS, 'result': result, 'msg': msg, 'show': show})
