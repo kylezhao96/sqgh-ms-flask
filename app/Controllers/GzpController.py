@@ -340,7 +340,10 @@ def get_firms_today():
         filters = {
             Gzp.firm.contains(parms['value'])
         }
-    return BaseController().successData(result=Gzp().getFirmList(filters))
+    resList = Gzp().getFirmList(filters)
+    if not len(resList):
+        resList.append(parms['value'])
+    return BaseController().successData(result=resList)
 
 
 @app.route('/api/gzp/id/new', methods=['GET'])
