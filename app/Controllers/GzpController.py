@@ -363,3 +363,9 @@ def get_new_gzp_id():
         'gzp_id_num': str(today.year).zfill(4)+str(today.month).zfill(2)+str(id).zfill(3)
     }
     return BaseController().successData(result=res)
+
+@app.route('/api/gzp/new', methods=['POST'])
+def submitGzpform():
+    form = request.get_json() or ''
+    print(form)
+    return BaseController().successData(msg='成功')
