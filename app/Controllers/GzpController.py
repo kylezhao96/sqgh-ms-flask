@@ -5,11 +5,14 @@ import re
 from dateutil.relativedelta import relativedelta
 from flask import request
 from sqlalchemy import and_
+from functools import reduce
 
 from app import app
 from app.Controllers.BaseController import BaseController
 from app.Models import Gzp, WTMaintain, User, WT
 import pandas as pd
+import xlrd, xlutils, xlwt
+from xlutils.copy import copy
 
 from app.Vendor.Decorator import classTransaction
 from app.env import EXCEL_PATH, TY_PATH, DESK_PATH
@@ -348,24 +351,72 @@ def get_firms_today():
 
 @app.route('/api/gzp/id/new', methods=['GET'])
 def get_new_gzp_id():
-    gzp_id_max = Gzp().getList({}, Gzp.gzp_id.desc(), ('gzp_id',),0,1)['list'][0]['gzp_id']
-    matchObj = re.search(r"(\d{4})(\d{2})(\d{3})",gzp_id_max )
+    gzp_id_max = Gzp().getList({}, Gzp.gzp_id.desc(), ('gzp_id',), 0, 1)['list'][0]['gzp_id']
+    matchObj = re.search(r"(\d{4})(\d{2})(\d{3})", gzp_id_max)
     year = int(matchObj.group(1))
     month = int(matchObj.group(2))
     id = int(matchObj.group(3))
     today = datetime.date.today()
-    if year!= today.year or month!=today.month:
+    if year != today.year or month != today.month:
         id = 1
     else:
-        id = id+1
+        id = id + 1
     res = {
-        'gzp_id': 'FJGZ-SD-SQ'+str(today.year).zfill(4)+str(today.month).zfill(2)+str(id).zfill(3),
-        'gzp_id_num': str(today.year).zfill(4)+str(today.month).zfill(2)+str(id).zfill(3)
+        'gzp_id': 'FJGZ-SD-SQ' + str(today.year).zfill(4) + str(today.month).zfill(2) + str(id).zfill(3),
+        'gzp_id_num': str(today.year).zfill(4) + str(today.month).zfill(2) + str(id).zfill(3)
     }
     return BaseController().successData(result=res)
+
 
 @app.route('/api/gzp/new', methods=['POST'])
 def submitGzpform():
     form = request.get_json() or ''
-    print(form)
+    df = pd.read_excel(os.getcwd() + r'\template\风机检修工作票模板.xls', header=None)
+    wb = xlrd.open_workbook(os.getcwd() + r'\template\风机检修工作票模板.xls', formatting_info=True)
+    ws = wb.sheet_by_index(0)
+
+    # 格式设定
+    # 设置字体
+    font = xlwt.Font()
+    # 字体类型
+    font.name = '宋体'
+    # 字体大小，11为字号，20为衡量单位
+    font.height = 20 * 9
+    # 设置单元格对齐方式
+    alignment_center = xlwt.Alignment()
+    alignment_left = xlwt.Alignment()
+    # 0x01(左端对齐)、0x02(水平方向上居中对齐)、0x03(右端对齐)
+    alignment_center.horz = 0x02
+    alignment_left.horz = 0x01
+    # 设置边框
+    borders = xlwt.Borders()
+    borders.bottom = 1
+
+    # 样式1
+    style0 = xlwt.XFStyle()
+    style0.font = font
+    style0.alignment = alignment_center
+    style0.borders = borders
+
+    # 样式2 左对齐
+    style1 = xlwt.XFStyle()
+    style1.font = font
+    style1.borders = borders
+    style1.alignment = alignment_left
+
+    # 复制
+    new_wb = copy(wb)
+    new_ws = new_wb.get_sheet(0)
+
+    # 写入
+    new_ws.write(2, 13, 'FJGZ-SD-SQ-' + form['gzpId'], style0)
+    new_ws.write(2, 1, form['firm']['key'], style0)
+    new_ws.write(4, 11, form['group'], style0)
+    new_ws.write(4, 4, form['manager']['key'], style0)
+    if len(form['members']) > 1:
+        new_ws.write(7, 0, reduce(lambda x, y: x + '、' + y, map(lambda x: x['key'], form['members'])), style1)
+    else:
+        new_ws.write(7, 0, form['members']['key'], style1)
+    new_ws.write(7, 16, len(form['members']) + 1, style0)
+    new_wb.save(os.getcwd() + r'\template\风机检修工作票模板1.xls')
     return BaseController().successData(msg='成功')
