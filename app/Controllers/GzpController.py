@@ -1,6 +1,7 @@
 import datetime
 import os
 import re
+import requests
 
 from dateutil.relativedelta import relativedelta
 from flask import request
@@ -10,6 +11,7 @@ from functools import reduce
 from app import app
 from app.Controllers.BaseController import BaseController
 from app.Models import Gzp, WTMaintain, User, WT
+from app.Vendor.Utils import Utils
 import pandas as pd
 import xlrd, xlutils, xlwt
 from xlutils.copy import copy
@@ -418,5 +420,16 @@ def submitGzpform():
     else:
         new_ws.write(7, 0, form['members']['key'], style1)
     new_ws.write(7, 16, len(form['members']) + 1, style0)
+    new_ws.write(14,0,'机组'+ form['terminalWt']+'/'+'机组'+form['terminalPower'])
     new_wb.save(os.getcwd() + r'\template\风机检修工作票模板1.xls')
     return BaseController().successData(msg='成功')
+
+
+@app.route('/api/gzp/weather/now', methods=['GET'])
+def get_weather_now():
+    res = requests.get('https://free-api.heweather.com/s6/weather/now?location=119.238801,36.09725&key=c4a0db75e5234137a88df8eccbcc7fe4').json()
+    return BaseController().successData(result={
+        'tmp': res['HeWeather6'][0]['now']['tmp'],
+        'cond_txt': res['HeWeather6'][0]['now']['cond_txt'],
+        'wind_spd': float(Utils.realRound(int(res['HeWeather6'][0]['now']['wind_spd']) / 3.6, 1))
+    })
