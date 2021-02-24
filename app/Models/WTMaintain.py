@@ -12,6 +12,7 @@ from sqlalchemy_serializer import SerializerMixin
 
 from app.Models.BaseModel import BaseModel
 from app import db
+from app.Models.Model import statistics_wtm
 
 
 class WTMaintain(db.Model, BaseModel, SerializerMixin):

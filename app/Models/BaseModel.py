@@ -1,17 +1,17 @@
-'''
+"""
 @Author: hua
 @Date: 2018-08-30 10:52:23
-@description: 基础模型，封装一些基础方法 
+@description: 基础模型，封装一些基础方法
 @LastEditors: hua
 @LastEditTime: 2019-11-28 20:20:54
-'''
+"""
 from app.Vendor.Code import Code
 from sqlalchemy import desc, asc, inspect
 from app import db
 import math
 
 
-class BaseModel():
+class BaseModel:
 
     def getList(self, cls_: object, filters: set, order: str = "id desc", field: tuple = (), offset: int = 0,
                 limit: int = 15) -> dict:
@@ -24,6 +24,7 @@ class BaseModel():
         @param int offset 偏移量
         @param int limit 取多少条
         @return dict
+        :param cls_:
         """
         res = {}
         res['page'] = {}

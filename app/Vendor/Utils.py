@@ -16,12 +16,14 @@ from app.Vendor.Code import Code
 import time
 from decimal import Decimal, ROUND_HALF_UP
 
+
 class Utils:
     ''' 
     * 用于sql结果列表对象类型转字典
     * @param list data
     * @return dict
     '''
+
     @staticmethod
     def db_l_to_d(data):
         data_list = []
@@ -37,6 +39,7 @@ class Utils:
     * @param object obj
     * @return dict
     '''
+
     @staticmethod
     def class_to_dict(obj):
         '''把对象(支持单个对象、list、set)转换成字典'''
@@ -59,14 +62,16 @@ class Utils:
         @param string filename
         return string path
     """
+
     @staticmethod
     def allowed_file(filename):
         return '.' in filename and \
-            filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+               filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
 
     """ uuid,唯一id 
         return string id
     """
+
     @staticmethod
     def unique_id(prefix=''):
         return prefix + hex(int(time.time()))[2:10] + hex(int(time.time() * 1000000) % 0x100000)[2:7]
@@ -78,19 +83,20 @@ class Utils:
     * @param dict msg
     * @return string
     """
+
     @staticmethod
     def validateMsgFormat(name, rules, msg):
-        #根据规则生成返回
+        # 根据规则生成返回
         if not msg:
             msgFormat = dict()
-            for key in  rules:
+            for key in rules:
                 if key == 'required':
                     ruleMsg = ''
                     actionMsg = validation[key][rules[key]]
                 elif key == 'maxlength':
                     ruleMsg = validation[key]
                     actionMsg = rules[key]
-                elif key == 'minlength': 
+                elif key == 'minlength':
                     ruleMsg = validation[key]
                     actionMsg = rules[key]
                 else:
@@ -106,6 +112,7 @@ class Utils:
     * @param int n
     * @return Decimal
     """
+
     @staticmethod
     def realRound(d, n=0):
         format = '0.'

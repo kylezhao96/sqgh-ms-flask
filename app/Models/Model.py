@@ -12,3 +12,8 @@ wt_gzp = db.Table("wt_gzp",
                   db.Column("gzp_id", db.Integer, db.ForeignKey("gzps.id"))
                   )
 
+# 中间表 工作任务统计与维护单 多对多关系
+statistics_wtm = db.Table('statistics_wtm',
+                          db.Column("statistics_id", db.Integer, db.ForeignKey('statistics.id')),
+                          db.Column('wtm_id', db.Integer, db.ForeignKey('wtms.id'))
+                          )

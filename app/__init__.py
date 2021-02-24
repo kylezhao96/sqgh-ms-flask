@@ -4,23 +4,23 @@
 @LastEditors  : hua
 @LastEditTime : 2019-12-18 14:52:28
 '''
-from flask import Flask
+from flask import Flask, Blueprint
 # 权限模块 https://github.com/raddevon/flask-permissions
 # from flask_permissions.core import Permissions
 from apscheduler.schedulers.blocking import BlockingScheduler
+from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from app.Vendor.Code import Code
 import environment as e
 from app.env import Config
-import os, json
-
 # 读取启动环境
 environment = e.read()
 
 # 普通json带error_code风格使用此app示例
 app = Flask(__name__)
+CORS(app, supports_credentials=True)
 # 注册权限
 # perms = Permissions(app, db, None)
 # 实例化websocket
@@ -32,7 +32,7 @@ migrate = Migrate()
 app.config.from_object(Config)
 db.init_app(app)
 migrate.init_app(app, db)
-
+api = Blueprint('api', __name__)
 from app.Vendor.ExceptionApi import ExceptionApi
 
 
@@ -54,12 +54,14 @@ if environment == 'socket':
         return ExceptionApi(Code.ERROR, e)
 # 引入使用的控制器
 if environment == 'run' or environment == 'restful':
-    from app.Controllers import UsersController, RestfulController, AdminController, CdfController, AuthController, GzpController
+    from app.Controllers import UsersController, RestfulController, AdminController, CdfController, AuthController, \
+        GzpController, StatisticsController, ImpController
     # 蓝图，新增的后台部分代码
     from app.Controllers.AdminController import admin
     from app.Controllers.AuthController import auth
     app.register_blueprint(admin, url_prefix='/admin')
     app.register_blueprint(auth, url_prefix='/auth')
+    app.register_blueprint(api, url_prefix='/api')
 
 if environment == 'socket':
     # 引入socketio控制层

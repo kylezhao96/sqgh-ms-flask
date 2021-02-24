@@ -5,3 +5,4 @@ from app.Models.PowerCut import PowerCut
 from app.Models.Log import Log
 from app.Models.WindTurbine import WT
 from app.Models.User import User
+from app.Models.Statistics import Statistics

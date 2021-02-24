@@ -1,24 +1,19 @@
-'''
-@Author: hua
-@Date: 2018-08-30 10:52:23
-@description:
-@LastEditors: hua
-@LastEditTime: 2019-07-25 08:44:30
-'''
 ''' author:hua
     date:2018.2.6
     基础控制器，封装一些基础方法 
     验证库https://cerberus.readthedocs.io/en/stable/index.html
 '''
-from app.env import DEBUG_LOG, MAX_CONTENT_LENGTH, ALLOWED_EXTENSIONS, SAVE_LOG
+import json
+
+import cerberus
+from flask import request, jsonify
+
 from app.Service.LogService import LogService
 from app.Vendor.Code import Code
 from app.Vendor.CustomErrorHandler import CustomErrorHandler
 from app.Vendor.Log import log
 from app.Vendor.Utils import Utils
-from flask import request, jsonify
-import cerberus
-import time, json
+from app.env import DEBUG_LOG, SAVE_LOG
 
 
 class BaseController:
