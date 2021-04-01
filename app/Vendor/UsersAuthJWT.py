@@ -64,9 +64,10 @@ class UsersAuthJWT():
             return '无效Token'
 
     @staticmethod
-    def authenticate(oa_account, oa_password):
+    def authenticate(oa_account, password):
         """
         用户登录，登录成功返回token，写将登录时间写入数据库；登录失败返回失败原因
+        :param oa_account:
         :param password:
         :return: json
         """
@@ -74,15 +75,15 @@ class UsersAuthJWT():
             User.oa_account == oa_account
         }
         userInfo = User().getOne(filters)
-        userInfoPas = User().getOne(filters, order='id desc', field=('oa_password',))
+        userInfoPas = User().getOne(filters, order='id desc', field=('password',))
         if userInfo is None:
             return BaseController().error('找不到用户')
         else:
-            if User.check_password(userInfoPas['oa_password'], oa_password):
+            if User.check_password(userInfoPas['password'], password):
                 updated_at = int(time.time())
                 token = UsersAuthJWT.encode_auth_token(userInfo['id'], updated_at)
-                User.update(userInfo['id'], remember_token=token.decode(), updated_at=updated_at)
-                return BaseController().successData({'token': token.decode(), 'user': userInfo}, '登陆成功')
+                User.update(userInfo['id'], remember_token=token.decode(), last_login_time=updated_at)
+                return BaseController().successData({'token': token.decode()}, '登陆成功')
             else:
                 return BaseController().error('密码不正确')
 

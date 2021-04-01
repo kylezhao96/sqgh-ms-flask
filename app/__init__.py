@@ -60,7 +60,7 @@ if environment == 'run' or environment == 'restful':
     from app.Controllers.AdminController import admin
     from app.Controllers.AuthController import auth
     app.register_blueprint(admin, url_prefix='/admin')
-    app.register_blueprint(auth, url_prefix='/auth')
+    app.register_blueprint(auth, url_prefix='/api/auth')
     app.register_blueprint(api, url_prefix='/api')
 
 if environment == 'socket':

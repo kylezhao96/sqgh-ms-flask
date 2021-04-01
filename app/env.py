@@ -1,10 +1,10 @@
-'''
+"""
 @Author: hua
 @Date: 2018-08-30 10:52:23
-@description: 
+@description:
 @LastEditors: hua
 @LastEditTime: 2019-11-28 20:05:49
-'''
+"""
 
 # debug
 DEBUG_LOG = True
@@ -51,75 +51,5 @@ class Config(object):
     SQLALCHEMY_MAX_OVERFLOW = 5
 
 
-Permissions = {
-    'admin': [
-        {
-            'roleId': 'admin',
-            'permissionId': 'dashboard',
-            'permissionName': '仪表盘',
-            'actionEntitySet': [
-                {
-                    'action': 'add',
-                    'describe': '新增',
-                    'defaultCheck': False
-                },
-                {
-                    'action': 'query',
-                    'describe': '查询',
-                    'defaultCheck': False
-                },
-                {
-                    'action': 'get',
-                    'describe': '详情',
-                    'defaultCheck': False
-                },
-                {
-                    'action': 'update',
-                    'describe': '修改',
-                    'defaultCheck': False
-                },
-                {
-                    'action': 'delete',
-                    'describe': '删除',
-                    'defaultCheck': False
-                }
-            ],
-            'actionList': None,
-            'dataAccess': None
-        },
-        {
-            'roleId': 'admin',
-            'permissionId': 'gzp',
-            'permissionName': '工作票',
-            'actionEntitySet': [
-                {
-                    'action': 'add',
-                    'describe': '新增',
-                    'defaultCheck': False
-                },
-                {
-                    'action': 'query',
-                    'describe': '查询',
-                    'defaultCheck': False
-                },
-                {
-                    'action': 'get',
-                    'describe': '详情',
-                    'defaultCheck': False
-                },
-                {
-                    'action': 'update',
-                    'describe': '修改',
-                    'defaultCheck': False
-                },
-                {
-                    'action': 'delete',
-                    'describe': '删除',
-                    'defaultCheck': False
-                }
-            ],
-            'actionList': None,
-            'dataAccess': None
-        }
-    ]
-}
+
+

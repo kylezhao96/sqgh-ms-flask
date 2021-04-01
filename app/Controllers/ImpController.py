@@ -22,6 +22,7 @@ from app import api
 def get_wt_data():
     file_month = request.form['fileMonth']
     file_date = datetime.datetime.strptime(file_month, '%Y-%m')
+    print(file_date)
     wt_file = request.files['wtFile']  # 风机单机数据
     cft_file = request.files['cftFile']  # 测风塔数据
     gz_file = request.files['gzFile']  # 风机故障数据
@@ -73,7 +74,7 @@ def trans_wt_file(file, file_date, source_path, exp_path, temp_path):
             csv_data = pd.read_csv(source_path + '\\' + line + '\\' + csv, encoding='ansi').fillna(0)
             csv_colums = csv_data.columns.values
             wt_id = csv_data.values[0][0]
-            # print('开始写入风机' + wt_id)
+            print('开始写入风机' + wt_id)
             wb_list = []
             for template_file in os.listdir(temp_path):
                 if template_file[0:3] == wt_id:
@@ -81,7 +82,6 @@ def trans_wt_file(file, file_date, source_path, exp_path, temp_path):
             row_num = 1
             wb = copy(wb_list[0])
             ws = wb.get_sheet(0)
-            # print('开始写入' + wt_id)
             for i, row in enumerate(csv_data.values):
                 # print('读取' + source_path + '\\' + line + '\\' + csv + str(i) + '行')
                 time = row[int(np.argwhere(csv_colums == '时间'))]
@@ -89,8 +89,8 @@ def trans_wt_file(file, file_date, source_path, exp_path, temp_path):
                     dt = datetime.datetime.strptime(time, '%Y/%m/%d %H:%M')
                 else:
                     dt = datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
-                if (file_date > dt) or (dt > (file_date + relativedelta(months=+1))):
-                    break
+                if file_date.month != dt.month:
+                    continue
                 # print('写入' + exp_path + '\\' + os.listdir(temp_path)[
                 #     int(wt_id[1: 3]) - 1] + ' ' + str(row_num) + '行')
                 ws.write(row_num, 0, dt.strftime('%Y/%m/%d %H:%M:%S'))
@@ -104,7 +104,8 @@ def trans_wt_file(file, file_date, source_path, exp_path, temp_path):
                     ws.write(row_num, 2, row[int(np.argwhere(csv_colums == '发电机有功功率'))])
                 row_num = row_num + 1
             wb.save(exp_path + '\\' + os.listdir(temp_path)[int(wt_id[1: 3]) - 1])
-    shutil.rmtree(source_path)  # 删除源文件夹
+    # shutil.rmtree(source_path)  # 删除源文件夹
+    # os.remove(source_path)
     print('执行风机单机数据转换成功！')
     # compress_files(exp_path, '风机单机数据.zip')
 
@@ -122,14 +123,14 @@ def unpack_files(file, unpack_path):
         os.mkdir(unpack_path)
     try:
         with zipfile.ZipFile(file, 'r') as f:
-            for fn in f.namelist():
-                extracted_path = Path(f.extract(fn, path=unpack_path))
-                extracted_path.rename(os.path.join(Path(unpack_path), fn.encode('cp437').decode('gbk')))
+            # for fn in f.namelist():
+            #     extracted_path = Path(f.extract(fn, path=unpack_path))
+            #     extracted_path.rename(os.path.join(Path(unpack_path), fn.encode('cp437').decode('gbk')))
+            f.extractall(path=unpack_path)
     except Exception as e:
         print("异常对象的类型是:%s" % type(e))
         print("异常对象的内容是:%s" % e)
     finally:
-        f.close()
         print('解压结束')
 
 
@@ -336,7 +337,7 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
     for row in cdf_dl.values:
         if file_date <= row[0] < file_date + relativedelta(months=+1):
             ws_copy.write(row_num, 0, row[0].strftime('%Y/%m/%d'))
-            ws_copy.write(row_num, 1, Utils.realRound(row[22] / 1000, 3))
+            ws_copy.write(row_num, 1, Utils.realRound(row[32] / 1000, 3))
             row_num = row_num + 1
         elif row[0] >= file_date + relativedelta(months=+1):
             break
@@ -412,31 +413,6 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
                         ws_copy_xd.write(row_num, 3, '电网限电')
                         row_num = row_num + 1
                 elif row[4] >= file_date + relativedelta(months=+1):
-                    break
-            except Exception as e:
-                print("异常对象的类型是:%s" % type(e))
-                print("异常对象的内容是:%s" % e)
-                continue
-        if str(row[11]).startswith('A'):
-            try:
-                # row_date = datetime.datetime.strptime(row[13], '%Y/%m/%d %H:%M')
-                if file_date <= row[13] < file_date + relativedelta(months=+1):
-                    for id in range(40):
-                        if id == 6:
-                            continue
-                        elif id == 11:
-                            continue
-                        elif id == 28:
-                            continue
-                        elif id == 29:
-                            continue
-                        wt_id = 'A' + str(id + 1).zfill(2)
-                        ws_copy_xd.write(row_num, 0, transDoubleId(wt_id))
-                        ws_copy_xd.write(row_num, 1, row[13].strftime('%Y-%m-%d %H:%M:%S'))
-                        ws_copy_xd.write(row_num, 2, row[14].strftime('%Y-%m-%d %H:%M:%S'))
-                        ws_copy_xd.write(row_num, 3, '电网限电')
-                        row_num = row_num + 1
-                elif row[13] >= file_date + relativedelta(months=+1):
                     break
             except Exception as e:
                 print("异常对象的类型是:%s" % type(e))

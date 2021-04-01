@@ -96,6 +96,7 @@ class BaseController:
     '''
 
     def error(self, msg='', show=True):
+        print('错误' + msg + ' 返回数据' + str(msg))
         return self.json({'error_code': Code.BAD_REQUEST, 'error': True, 'msg': msg, 'show': show})
 
     '''

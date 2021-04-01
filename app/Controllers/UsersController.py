@@ -4,7 +4,7 @@
 @LastEditors  : hua
 @LastEditTime : 2019-12-18 14:13:46
 '''
-from app import app
+from app import app, api
 from app.Controllers.BaseController import BaseController
 from app.Vendor.Utils import Utils
 from app.Models import User, Gzp
@@ -13,7 +13,7 @@ from app.Models.Log import Log
 from app.Vendor.UsersAuthJWT import UsersAuthJWT
 from app.Vendor.Decorator import validator
 from flask import request
-from app.env import Permissions
+# from app.env import Permissions
 
 
 @app.route('/', methods=['GET'])
@@ -59,25 +59,16 @@ def addUser():
     return BaseController().successData(msg='用户增加成功')
 
 
-@app.route('/user/info', methods=['POST'])
+@api.route('/user/info', methods=['GET'])
 def getInfo():
-    token = request.json.get('token')
+    token = request.args.get("token")
     if not token:
         return BaseController().error(msg='token为空')
     filters = {User.remember_token == token}
-    field = ('id', 'name', 'oa_account', 'status', 'company', 'created_at', 'updated_at', 'role_id', 'role_creator_id',
-             'role_create_time', 'role_status')
+    field = ('id', 'name', 'oa_account', 'status', 'last_login_time', 'last_login_ip', 'created_time', 'deleted', 'role_id')
     user_info = User().getOne(filters=filters, field=field)
     if not user_info:
         return BaseController().error(msg='查询失败')
-    user_info['role'] = {
-        'id': user_info['role_id'],
-        'status': user_info['role_status'],
-        'creatorId': user_info['role_creator_id'],
-        'createTime': user_info['role_create_time'],
-        'permissions': Permissions[user_info['role_id']]
-    }
-    del user_info['role_creator_id'], user_info['role_create_time'], user_info['role_status']
     return BaseController().successData(result=user_info, msg='获取成功')
 
 

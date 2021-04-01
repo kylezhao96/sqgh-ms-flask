@@ -12,11 +12,11 @@ auth = Blueprint('auth', __name__)
 @auth.route('/login', methods=['POST'])
 def login():
     oa_account = request.json.get('account')
-    oa_password = request.json.get('password')
-    if not oa_account or not oa_password:
+    password = request.json.get('password')
+    if not oa_account or not password:
         return BaseController().error('账号和密码不能为空')
     else:
-        result = UsersAuthJWT.authenticate(oa_account, oa_password)
+        result = UsersAuthJWT.authenticate(oa_account, password)
         return result
 
 
@@ -29,7 +29,7 @@ def logout():
     user = User().getOne(filters={User.remember_token == token})
     if not user:
         return BaseController().error(msg='查询失败')
-    User.update(user['id'], updated_at, '')
+    User.update(user['id'], remember_token='')
     return BaseController().successData(msg='登出成功')
 
 
@@ -37,27 +37,21 @@ def logout():
 def register():
     """ 注册 """
     oa_account = request.json.get('account')
-    oa_password = request.json.get('password')
-    company = request.json.get('company')
+    password = request.json.get('password')
     name = request.json.get('name')
     filters = {
-        User.name == name
+        User.oa_account == oa_account
     }
     user_data = User().getOne(filters)
     if user_data is None:
         create_time = int(time.time())
         user = User(
             oa_account=oa_account,
-            oa_password=User.set_password(oa_password),
-            company=company,
+            password=User.set_password(password),
             name=name,
             status=1,
-            created_at=create_time,
-            role_id='admin',
-            role_name='管理员',
-            role_create_time=create_time,
-            role_creator_id='default',
-            role_status=1
+            created_time=create_time,
+            role_id='auditor',
         )
         status = user.add(user)
         if status:
@@ -69,3 +63,5 @@ def register():
     #     User().update(user, oa_account, User.set_password(oa_password), company, 1, create_time, 'admin', '管理员',
     #                   create_time, 'default', 1)
     return BaseController().error('账号已注册')
+
+

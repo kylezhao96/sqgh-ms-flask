@@ -1,28 +1,37 @@
-'''
-@Author: hua
-@Date: 2018-08-30 10:52:23
-@LastEditors: hua
-@LastEditTime: 2019-11-23 15:40:39
-'''
-from decimal import Decimal
-
-''' author:hua
+""" author:hua
     date:2018.5.9
-    工具类，封装一些通用方法 
-'''
+    工具类，封装一些通用方法
+"""
 from app.env import ALLOWED_EXTENSIONS
-from app.lang.zh_CN.validation import validation
 from app.Vendor.Code import Code
 import time
 from decimal import Decimal, ROUND_HALF_UP
 
+validation = {
+    # 验证规则
+    'required': {
+        True: '必须',
+        False: '非必须'
+    },
+    'type': '类型',
+    'string': '字符串',
+    'integer': '整形',
+    'minlength': '最小长度',
+    'maxlength': '最大长度',
+    # 验证字段
+    'nickName': '昵称',
+    'headImg': '头像',
+    'email': '邮箱',
+    'password': '密码'
+}
+
 
 class Utils:
-    ''' 
+    """
     * 用于sql结果列表对象类型转字典
     * @param list data
     * @return dict
-    '''
+    """
 
     @staticmethod
     def db_l_to_d(data):
@@ -42,7 +51,7 @@ class Utils:
 
     @staticmethod
     def class_to_dict(obj):
-        '''把对象(支持单个对象、list、set)转换成字典'''
+        """把对象(支持单个对象、list、set)转换成字典"""
         is_list = obj.__class__ == [].__class__
         is_set = obj.__class__ == set().__class__
         if is_list or is_set:

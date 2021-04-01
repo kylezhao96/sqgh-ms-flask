@@ -23,17 +23,16 @@ class User(db.Model, BaseModel, SerializerMixin):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(20), unique=True, nullable=False)
     oa_account = db.Column(db.String(20), unique=True)
-    oa_password = db.Column(db.String(100))
+    password = db.Column(db.String(100))
     company = db.Column(db.String(100))
     status = db.Column(db.Integer)
+    # telephone = db.Column(db.String(100))
     remember_token = db.Column(db.String(200))
-    created_at = db.Column(db.Integer)
-    updated_at = db.Column(db.Integer)
+    created_time = db.Column(db.Integer)
+    last_login_ip = db.Column(db.String(100))
+    last_login_time = db.Column(db.Integer)
     role_id = db.Column(db.String(100))
-    role_name = db.Column(db.String(100))
-    role_creator_id = db.Column(db.String(100))
-    role_create_time = db.Column(db.Integer)
-    role_status = db.Column(db.Integer)
+    deleted = db.Column(db.Integer)
 
     def getOne(self, filters, order='id desc', field=()):
         res = db.session.query(User).filter(*filters)
@@ -74,20 +73,18 @@ class User(db.Model, BaseModel, SerializerMixin):
 
     # 修改用户
     @staticmethod
-    def update(id, oa_account=(), oa_password=(), company=(), status=(), created_at=(), role_id=(), updated_at=(),
-               role_name=(), role_create_time=(), role_creator_id=(), role_status=(), remember_token=()):
+    def update(id, oa_account=(), password=(), status=(), created_time=(), role_id=(), last_login_time=(),
+               remember_token=(), last_login_ip=(), deleted=(), name=()):
         user = db.session.query(User).filter_by(id=id).first()
         user.oa_account = oa_account if oa_account else user.oa_account
-        user.oa_password = User.set_password(oa_password) if oa_password else user.oa_password
-        user.company = company if company else user.company,
+        user.password = User.set_password(password) if password else user.password
+        user.name = name if name else user.name
         user.status = status if status else user.status,
-        user.created_at = created_at if created_at else user.created_at,
+        user.deleted = deleted if deleted else user.deleted,
+        user.created_time = created_time if created_time else user.created_time,
         user.role_id = role_id if role_id else user.role_id,
-        user.role_name = role_name if role_name else user.role_name,
-        user.role_create_time = role_create_time if role_create_time else user.role_create_time,
-        user.role_creator_id = role_creator_id if role_creator_id else user.role_creator_id,
-        user.role_status = role_status if role_status else user.role_status
-        user.updated_at = int(time.time()) if updated_at else user.updated_at
+        user.last_login_time = int(time.time()) if last_login_time else user.last_login_time
+        user.last_login_ip = last_login_ip if last_login_ip else user.last_login_ip
         user.remember_token = remember_token if remember_token else user.remember_token
         return db.session.commit()
 
@@ -98,8 +95,8 @@ class User(db.Model, BaseModel, SerializerMixin):
 
     # # 更新更新时间
     # @staticmethod
-    # def update(id, updated_at, token):
-    #     db.session.query(User).filter_by(id=id).update({'updated_at': updated_at, 'remember_token': token})
+    # def update(id, last_login_time, token):
+    #     db.session.query(User).filter_by(id=id).update({'last_login_time': last_login_time, 'remember_token': token})
     #     return db.session.commit()
 
     # 根据姓名获取用户
@@ -111,5 +108,3 @@ class User(db.Model, BaseModel, SerializerMixin):
             return manager
         else:
             return User.query.filter_by(name=name).first()
-
-
