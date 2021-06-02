@@ -371,12 +371,37 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
                     break
             except Exception as e:
                 continue
-
+        elif str(row[0]).startswith('3'):
+            try:
+                # row_date = datetime.datetime.strptime(row[3], '%Y/%m/%d %H:%M')
+                if file_date <= row[3] < file_date + relativedelta(months=+1):
+                    ws_copy_wh.write(row_num, 0, transDoubleId(row[0][6:-1]))
+                    ws_copy_wh.write(row_num, 1, row[3].strftime('%Y-%m-%d %H:%M:%S'))
+                    ws_copy_wh.write(row_num, 2, row[4].strftime('%Y-%m-%d %H:%M:%S'))
+                    ws_copy_wh.write(row_num, 3, row[2])
+                    row_num = row_num + 1
+                elif row[0] >= file_date + relativedelta(months=+1):
+                    break
+            except Exception as e:
+                continue
         if str(row[8]).startswith('A'):
             try:
                 # row_date = datetime.datetime.strptime(row[11], '%Y/%m/%d %H:%M')
                 if file_date <= row[11] < file_date + relativedelta(months=+1):
                     ws_copy_wh.write(row_num, 0, transDoubleId(row[8][0:3]))
+                    ws_copy_wh.write(row_num, 1, row[11].strftime('%Y-%m-%d %H:%M:%S'))
+                    ws_copy_wh.write(row_num, 2, row[12].strftime('%Y-%m-%d %H:%M:%S'))
+                    ws_copy_wh.write(row_num, 3, row[10])
+                    row_num = row_num + 1
+                elif row[11] >= file_date + relativedelta(months=+1):
+                    break
+            except Exception as e:
+                continue
+        elif str(row[8]).endswith('3'):
+            try:
+                # row_date = datetime.datetime.strptime(row[11], '%Y/%m/%d %H:%M')
+                if file_date <= row[11] < file_date + relativedelta(months=+1):
+                    ws_copy_wh.write(row_num, 0, transDoubleId(row[8][6:-1]))
                     ws_copy_wh.write(row_num, 1, row[11].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 2, row[12].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 3, row[10])
