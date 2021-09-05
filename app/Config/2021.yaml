@@ -1,0 +1,6 @@
+rbb:
+  dir: /Users/kyle/Desktop
+  name: 2021年石桥风电场日报表(5月27日换表后).xlsx
+  sheet0:
+    merge_row:
+      - [151, 152, 153]

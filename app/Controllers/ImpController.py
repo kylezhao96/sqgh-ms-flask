@@ -70,20 +70,20 @@ def trans_wt_file(file, file_date, source_path, exp_path, temp_path):
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
     for line in os.listdir(source_path):
-        for csv in os.listdir(source_path + '\\' + line):
-            csv_data = pd.read_csv(source_path + '\\' + line + '\\' + csv, encoding='ansi').fillna(0)
+        for csv in os.listdir(source_path + '/' + line):
+            csv_data = pd.read_csv(source_path + '/' + line + '/' + csv, encoding='gbk').fillna(0)
             csv_colums = csv_data.columns.values
             wt_id = csv_data.values[0][0]
             print('开始写入风机' + wt_id)
             wb_list = []
             for template_file in os.listdir(temp_path):
                 if template_file[0:3] == wt_id:
-                    wb_list.append(xlrd.open_workbook(temp_path + '\\' + template_file, formatting_info=True))
+                    wb_list.append(xlrd.open_workbook(temp_path + '/' + template_file, formatting_info=True))
             row_num = 1
             wb = copy(wb_list[0])
             ws = wb.get_sheet(0)
             for i, row in enumerate(csv_data.values):
-                # print('读取' + source_path + '\\' + line + '\\' + csv + str(i) + '行')
+                # print('读取' + source_path + '/' + line + '/' + csv + str(i) + '行')
                 time = row[int(np.argwhere(csv_colums == '时间'))]
                 if len(time) < 17:
                     dt = datetime.datetime.strptime(time, '%Y/%m/%d %H:%M')
@@ -91,7 +91,7 @@ def trans_wt_file(file, file_date, source_path, exp_path, temp_path):
                     dt = datetime.datetime.strptime(time, '%Y-%m-%d %H:%M:%S')
                 if file_date.month != dt.month:
                     continue
-                # print('写入' + exp_path + '\\' + os.listdir(temp_path)[
+                # print('写入' + exp_path + '/' + os.listdir(temp_path)[
                 #     int(wt_id[1: 3]) - 1] + ' ' + str(row_num) + '行')
                 ws.write(row_num, 0, dt.strftime('%Y/%m/%d %H:%M:%S'))
                 if '风速平均' in csv_colums:
@@ -103,7 +103,7 @@ def trans_wt_file(file, file_date, source_path, exp_path, temp_path):
                 if '发电机有功功率' in csv_colums:
                     ws.write(row_num, 2, row[int(np.argwhere(csv_colums == '发电机有功功率'))])
                 row_num = row_num + 1
-            wb.save(exp_path + '\\' + os.listdir(temp_path)[int(wt_id[1: 3]) - 1])
+            wb.save(exp_path + '/' + os.listdir(temp_path)[int(wt_id[1: 3]) - 1])
     # shutil.rmtree(source_path)  # 删除源文件夹
     # os.remove(source_path)
     print('执行风机单机数据转换成功！')
@@ -229,7 +229,7 @@ def trans_gz_files(file, file_date, exp_path, temp_path):
     :param file: 故障文件
     :return:
     """
-    gz_df = pd.read_csv(file, encoding='ansi')
+    gz_df = pd.read_csv(file, encoding='gbk')
     exp_path = os.path.join(exp_path, '停机数据')
     exp_file = os.path.join(exp_path, '石桥子风电场_停机数据.xls')
     temp_file = os.path.join(temp_path, '石桥子风电场_停机数据.xls')
@@ -301,14 +301,16 @@ def transDoubleId(wt_id):
     :param wt_id: string 风机号
     :return: wt_double_id 双重编号
     """
+    if not wt_id.startswith('A'):
+        wt_id = wt_id[1:]
     if int(wt_id[1:]) <= 10:
-        return wt_id + '-312' + str(11 - int(wt_id[1:])).zfill(2)
+        return 'A' + (wt_id[1:]).zfill(2) + '-312' + str(11 - int(wt_id[1:])).zfill(2)
     elif int(wt_id[1:]) <= 20:
-        return wt_id + '-313' + str(21 - int(wt_id[1:])).zfill(2)
+        return 'A' + (wt_id[1:]).zfill(2) + '-313' + str(21 - int(wt_id[1:])).zfill(2)
     elif int(wt_id[1:]) <= 30:
-        return wt_id + '-322' + str(31 - int(wt_id[1:])).zfill(2)
+        return 'A' + (wt_id[1:]).zfill(2) + '-322' + str(31 - int(wt_id[1:])).zfill(2)
     else:
-        return wt_id + '-323' + str(41 - int(wt_id[1:])).zfill(2)
+        return 'A' + (wt_id[1:]).zfill(2) + '-323' + str(41 - int(wt_id[1:])).zfill(2)
 
 
 def trans_rbb_file(file, file_date, exp_path, temp_path):
@@ -358,37 +360,47 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
     # 写入维护数据
     cdf_wh = pd.read_excel(file, sheet_name='风机维护统计', header=None)
     for row in cdf_wh.values:
-        if str(row[0]).startswith('A'):
+        if str(row[0]).strip().startswith('A'):
             try:
                 # row_date = datetime.datetime.strptime(row[3], '%Y/%m/%d %H:%M')
                 if file_date <= row[3] < file_date + relativedelta(months=+1):
-                    ws_copy_wh.write(row_num, 0, transDoubleId(row[0][0:3]))
+                    ws_copy_wh.write(row_num, 0, transDoubleId(row[0].strip()[0:3]))
                     ws_copy_wh.write(row_num, 1, row[3].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 2, row[4].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 3, row[2])
                     row_num = row_num + 1
-                elif row[0] >= file_date + relativedelta(months=+1):
+                elif row[3] >= file_date + relativedelta(months=+1):
                     break
             except Exception as e:
+                print(e)
+                print(row[0])
+                print(row[3])
+                print(row[8])
+                print(row[11])
                 continue
-        elif str(row[0]).startswith('3'):
+        elif str(row[0]).strip().startswith('3'):
             try:
                 # row_date = datetime.datetime.strptime(row[3], '%Y/%m/%d %H:%M')
                 if file_date <= row[3] < file_date + relativedelta(months=+1):
-                    ws_copy_wh.write(row_num, 0, transDoubleId(row[0][6:-1]))
+                    ws_copy_wh.write(row_num, 0, transDoubleId(row[0].strip()[6:-1]))
                     ws_copy_wh.write(row_num, 1, row[3].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 2, row[4].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 3, row[2])
                     row_num = row_num + 1
-                elif row[0] >= file_date + relativedelta(months=+1):
+                elif row[3] >= file_date + relativedelta(months=+1):
                     break
             except Exception as e:
+                print(e)
+                print(row[0])
+                print(row[3])
+                print(row[8])
+                print(row[11])
                 continue
-        if str(row[8]).startswith('A'):
+        if str(row[8]).strip().startswith('A'):
             try:
                 # row_date = datetime.datetime.strptime(row[11], '%Y/%m/%d %H:%M')
                 if file_date <= row[11] < file_date + relativedelta(months=+1):
-                    ws_copy_wh.write(row_num, 0, transDoubleId(row[8][0:3]))
+                    ws_copy_wh.write(row_num, 0, transDoubleId(row[8].strip()[0:3]))
                     ws_copy_wh.write(row_num, 1, row[11].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 2, row[12].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 3, row[10])
@@ -396,12 +408,17 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
                 elif row[11] >= file_date + relativedelta(months=+1):
                     break
             except Exception as e:
+                print(e)
+                print(row[0])
+                print(row[3])
+                print(row[8])
+                print(row[11])
                 continue
-        elif str(row[8]).endswith('3'):
+        elif str(row[8]).strip().startswith('3'):
             try:
                 # row_date = datetime.datetime.strptime(row[11], '%Y/%m/%d %H:%M')
                 if file_date <= row[11] < file_date + relativedelta(months=+1):
-                    ws_copy_wh.write(row_num, 0, transDoubleId(row[8][6:-1]))
+                    ws_copy_wh.write(row_num, 0, transDoubleId(row[8].strip()[6:-1]))
                     ws_copy_wh.write(row_num, 1, row[11].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 2, row[12].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 3, row[10])
@@ -409,6 +426,11 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
                 elif row[11] >= file_date + relativedelta(months=+1):
                     break
             except Exception as e:
+                print(e)
+                print(row[0])
+                print(row[3])
+                print(row[8])
+                print(row[11])
                 continue
     wb_copy_wh.save(exp_tj_file)
     # 写入限电数据

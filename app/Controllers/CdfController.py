@@ -1,145 +1,375 @@
 import datetime
+import os
 
 from dateutil.relativedelta import relativedelta
 from flask import request
+from functools import reduce
 
-from app import app
+from app import app, api
 from app.Controllers.BaseController import BaseController
 from app.Models import CalDailyForm
 import pandas as pd
+from openpyxl.utils import get_column_letter, column_index_from_string
 
 from app.Models.GpPlan import GpPlan
 from app.Vendor.Decorator import classTransaction
-from app.env import EXCEL_PATH, TY_PATH
-from app.Vendor.Utils import Utils
+from app.Vendor.Utils import Utils, dict_merge
+from app.env import config
+
+
+@api.route('/basic-data/upload', methods=['POST'])
+def basic_data_upload():
+    """
+    采用上传方式进行数据同步
+    @return:
+    """
+    tmp = request.form['endMonth']
+    start_month = datetime.datetime.strptime(request.form['startMonth'], '%Y-%m-%d') if request.form[
+                                                                                            'startMonth'] != '' else ''
+    end_month = datetime.datetime.strptime(request.form['endMonth'], '%Y-%m-%d') if request.form[
+                                                                                        'endMonth'] != '' else ''
+    rbb_file = request.files['rbbFile']  # 日报表数据
+    dlfs_file = request.files['dlfsFile']  # 风机电量风速统计表
+    import_cdf(rbb_file, dlfs_file, start_month.year)
 
 
 @app.route('/api/cdfs', methods=['PUT'])
-def import_cdf():
+def syn_cdf():
+    year = datetime.date.year
+    cfg_rbb = {}
+    cfg_dlfs = {}
+    if str(year) in config.keys():
+        cfg_rbb = config[str(year)]['rbb']
+        cfg_dlfs = config[str(year)]['dlfs']
+    else:
+        cfg_rbb = config['default']['rbb']
+        cfg_dlfs = config['default']['dlfs']
+    pass
+    # rbb_dir = config['']
+    # dlfs_dir = Config.DLFS['dir']
+    # import_cdf(rbb_dir, dlfs_dir)
+
+
+@app.route('/api/syn/cdf', methods=['GET'])
+def import_cdf(rbb_file='', year=2021, types='overwrite'):
     """
     自动化对日报表进行读取同步
+    rbb_file: 日报表文件
+    year: 数据年份
+    type: insert 插入模式 / overwrite 覆盖模式
     """
-    cdf = pd.read_excel(EXCEL_PATH, sheet_name='日报计算表', usecols=range(76), skiprows=range(3), header=None)
-    ty = pd.read_excel(TY_PATH, sheet_name='风速统计', usecols=range(3), skiprows=range(2), header=None).fillna('')
-    cdf.fillna(0)
-    print(cdf)
+    if str(year) in config.keys():
+        cfg_rbb = config[str(year)]['rbb']
+    else:
+        cfg_rbb = config['default']['rbb']
+    print(cfg_rbb)
+    rbjsb_sheet = cfg_rbb['sheet0']
+    cdf = pd.read_excel(rbb_file if rbb_file else os.path.join(cfg_rbb['dir'], cfg_rbb['name']),
+                        sheet_name=rbjsb_sheet['name'],
+                        usecols=range(column_index_from_string(rbjsb_sheet['end_col'])),
+                        skiprows=range(rbjsb_sheet['start_row'] - 1),
+                        header=None
+                        )
     response = []
-    this_year = datetime.date.today().year
-    for x in range(366):
-        # if CalDailyForm.query.filter_by(date=cdf.loc[x + 1].values[0] + datetime.timedelta(-1)).first():
-        # continue  # 如果数据库存在本日数据，那么跳过
+    for x in range(rbjsb_sheet['end_row'] - rbjsb_sheet['start_row']):
+        if types == 'insert' and CalDailyForm.query.filter_by(
+                date=cdf.loc[x].values[0]).first():
+            continue  # 如果数据库存在本日数据，那么跳过
+        if pd.isnull(cdf.loc[x].values[1]):
+            # if cdf.loc[x].values[0] >= datetime.now():
+            break  # 如果读到的数据不是浮点数类型，那么停止，用于判断是否到达表内空行
         # cdf_db = CalDailyForm.query.filter_by(date=cdf.loc[x + 1].values[0] + datetime.timedelta(-1)).first()
-        data = {}
-        if x == 0:
+        data = {'date': cdf.loc[x].values[column_index_from_string(rbjsb_sheet['date_col']) - 1],
+                'fka312': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fka_312_col']) - 1]),
+                'bka312': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['bka_312_col']) - 1]),
+                'fka313': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fka_313_col']) - 1]),
+                'bka313': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['bka_313_col']) - 1]),
+                'fka322': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fka_322_col']) - 1]),
+                'bka322': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['bka_322_col']) - 1]),
+                'fka323': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fka_323_col']) - 1]),
+                'bka323': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['bka_323_col']) - 1]),
+                'fka31b': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fka_31b_col']) - 1]),
+                'fka21b': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fka_21b_col']) - 1]),
+                'fka311': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fka_311_col']) - 1]),
+                'bka311': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['bka_311_col']) - 1]),
+                'fkr311': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fkr_311_col']) - 1]),
+                'bkr311': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['bkr_311_col']) - 1]),
+                'fka321': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fka_321_col']) - 1]),
+                'bka321': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['bka_321_col']) - 1]),
+                'fkr321': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fkr_321_col']) - 1]),
+                'bkr321': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['bkr_321_col']) - 1]),
+                'bka111': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['bka_111_col']) - 1]),
+                'fka111': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fka_111_col']) - 1]),
+                'dgp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['dgp1_col']) - 1]),
+                'donp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['donp1_col']) - 1]),
+                'doffp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['doffp1_col']) - 1]),
+                'dcp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['dcp1_col']) - 1]),
+                'dcl1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['dcl1_col']) - 1]),
+                'dgp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['dgp2_col']) - 1]),
+                'donp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['donp2_col']) - 1]),
+                'doffp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['doffp2_col']) - 1]),
+                'dcp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['dcp2_col']) - 1]),
+                'dcl2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['dcl2_col']) - 1]),
+                'dgp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['dgp_col']) - 1]),
+                'donp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['donp_col']) - 1]),
+                'doffp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['doffp_col']) - 1]),
+                'dcp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['dcp_col']) - 1]),
+                'dcl': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['dcl_col']) - 1]),
+                'doffp31b': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['doffp_31b_col']) - 1]),
+                'doffp21b': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['doffp_21b_col']) - 1]),
+                'agp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['agp1_col']) - 1]),
+                'aonp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['aonp1_col']) - 1]),
+                'aoffp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['aoffp1_col']) - 1]),
+                'acp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['acp1_col']) - 1]),
+                'acl1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['acl1_col']) - 1]),
+                'agp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['agp2_col']) - 1]),
+                'aonp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['aonp2_col']) - 1]),
+                'aoffp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['aoffp2_col']) - 1]),
+                'acp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['acp2_col']) - 1]),
+                'acl2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['acl2_col']) - 1]),
+                'agp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['agp_col']) - 1]),
+                'aonp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['aonp_col']) - 1]),
+                'aoffp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['aoffp_col']) - 1]),
+                'acp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['acp_col']) - 1]),
+                'acl': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['acl_col']) - 1]),
+                'mgp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['mgp1_col']) - 1]),
+                'monp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['monp1_col']) - 1]),
+                'moffp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['moffp1_col']) - 1]),
+                'mcp1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['mcp1_col']) - 1]),
+                'mcl1': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['mcl1_col']) - 1]),
+                'mgp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['mgp2_col']) - 1]),
+                'monp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['monp2_col']) - 1]),
+                'moffp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['moffp2_col']) - 1]),
+                'mcp2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['mcp2_col']) - 1]),
+                'mcl2': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['mcl2_col']) - 1]),
+                'mgp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['mgp_col']) - 1]),
+                'monp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['monp_col']) - 1]),
+                'moffp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['moffp_col']) - 1]),
+                'mcp': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['mcp_col']) - 1]),
+                'mcl': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['mcl_col']) - 1]),
+                'offja311': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['doffja_311_col']) - 1]),
+                'offjr311': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['doffjr_311_col']) - 1]),
+                'offja321': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['doffja_321_col']) - 1]),
+                'offjr321': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['doffjr_321_col']) - 1]),
+                }
+        continue_flag = 0  # 设置flag用于判断是否结束本循环
+        for merge_row in rbjsb_sheet['merge_row']:
+            if merge_row[0] - rbjsb_sheet['start_row'] <= x < merge_row[-1] - rbjsb_sheet['start_row']:
+                continue_flag = 1
+                break
+            if x == merge_row[-1] - rbjsb_sheet['start_row']:
+                data['dgp1'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['dgp1_col']) - 1], merge_row))
+                data['donp1'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['donp1_col']) - 1], merge_row))
+                data['doffp1'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['doffp1_col']) - 1], merge_row))
+                data['dcp1'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['dcp1_col']) - 1], merge_row))
+                data['dcl1'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['dcl1_col']) - 1],
+                                       merge_row))
+                data['dgp2'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['dgp2_col']) - 1],
+                                       merge_row))
+                data['donp2'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['donp2_col']) - 1], merge_row))
+                data['doffp2'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['doffp2_col']) - 1], merge_row))
+                data['dcp2'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['dcp2_col']) - 1],
+                                       merge_row))
+                data['dcl2'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['dcl2_col']) - 1],
+                                       merge_row))
+                data['dgp'] = sum(map(lambda i:
+                                      cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                          column_index_from_string(rbjsb_sheet['dgp_col']) - 1],
+                                      merge_row))
+                data['donp'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['donp_col']) - 1],
+                                       merge_row))
+                data['doffp'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['doffp_col']) - 1], merge_row))
+                data['dcp'] = sum(map(lambda i:
+                                      cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                          column_index_from_string(rbjsb_sheet['dcp_col']) - 1],
+                                      merge_row))
+                data['dcl'] = sum(map(lambda i:
+                                      cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                          column_index_from_string(rbjsb_sheet['dcl_col']) - 1],
+                                      merge_row))
+                data['doffp31b'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['doffp_31b_col']) - 1], merge_row))
+                data['doffp21b'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['doffp_21b_col']) - 1], merge_row))
+                data['agp1'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['agp1_col']) - 1],
+                                       merge_row))
+                data['aonp1'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['aonp1_col']) - 1], merge_row))
+                data['aoffp1'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['aoffp1_col']) - 1], merge_row))
+                data['acp1'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['acp1_col']) - 1],
+                                       merge_row))
+                data['acl1'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['acl1_col']) - 1],
+                                       merge_row))
+                data['agp2'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['agp2_col']) - 1],
+                                       merge_row))
+                data['aonp2'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['aonp2_col']) - 1], merge_row))
+                data['aoffp2'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['aoffp2_col']) - 1], merge_row))
+                data['acp2'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['acp2_col']) - 1],
+                                       merge_row))
+                data['acl2'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['acl2_col']) - 1],
+                                       merge_row))
+                data['agp'] = sum(map(lambda i:
+                                      cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                          column_index_from_string(rbjsb_sheet['agp_col']) - 1],
+                                      merge_row))
+                data['aonp'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['aonp_col']) - 1],
+                                       merge_row))
+                data['aoffp'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['aoffp_col']) - 1], merge_row))
+                data['acp'] = sum(map(lambda i:
+                                      cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                          column_index_from_string(rbjsb_sheet['acp_col']) - 1],
+                                      merge_row))
+                data['acl'] = sum(map(lambda i:
+                                      cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                          column_index_from_string(rbjsb_sheet['acl_col']) - 1],
+                                      merge_row))
+                data['mgp1'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['mgp1_col']) - 1],
+                                       merge_row))
+                data['monp1'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['monp1_col']) - 1], merge_row))
+                data['moffp1'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['moffp1_col']) - 1], merge_row))
+                data['mcp1'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['mcp1_col']) - 1],
+                                       merge_row))
+                data['mcl1'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['mcl1_col']) - 1],
+                                       merge_row))
+                data['mgp2'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['mgp2_col']) - 1],
+                                       merge_row))
+                data['monp2'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['monp2_col']) - 1], merge_row))
+                data['moffp2'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['moffp2_col']) - 1], merge_row))
+                data['mcp2'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['mcp2_col']) - 1],
+                                       merge_row))
+                data['mcl2'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['mcl2_col']) - 1],
+                                       merge_row))
+                data['mgp'] = sum(map(lambda i:
+                                      cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                          column_index_from_string(rbjsb_sheet['mgp_col']) - 1],
+                                      merge_row))
+                data['monp'] = sum(map(lambda i:
+                                       cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                           column_index_from_string(rbjsb_sheet['monp_col']) - 1],
+                                       merge_row))
+                data['moffp'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['moffp_col']) - 1], merge_row))
+                data['mcp'] = sum(map(lambda i:
+                                      cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                          column_index_from_string(rbjsb_sheet['mcp_col']) - 1],
+                                      merge_row))
+                data['mcl'] = sum(map(lambda i:
+                                      cdf.loc[i - rbjsb_sheet['start_row']].values[
+                                          column_index_from_string(rbjsb_sheet['mcl_col']) - 1],
+                                      merge_row))
+                data['offja311'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['doffja_311_col']) - 1], merge_row))
+                data['offjr311'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['doffjr_311_col']) - 1], merge_row))
+                data['offja321'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['doffja_321_col']) - 1], merge_row))
+                data['offjr321'] = sum(map(lambda i: cdf.loc[i - rbjsb_sheet['start_row']].values[
+                    column_index_from_string(rbjsb_sheet['doffjr_321_col']) - 1], merge_row))
+                break
+        if continue_flag == 1:
+            # 出发flag，本次循环结束，不需要执行事务
             continue
-            # data['date'] = datetime.datetime(this_year - 1, 12, 31, 0, 0)
-            # data['fka312'] = float(cdf.loc[x].values[1])
-            # data['bka312'] = float(cdf.loc[x].values[2])
-            # data['fka313'] = float(cdf.loc[x].values[3])
-            # data['bka313'] = float(cdf.loc[x].values[4])
-            # data['fka322'] = float(cdf.loc[x].values[5])
-            # data['bka322'] = float(cdf.loc[x].values[6])
-            # data['fka323'] = float(cdf.loc[x].values[7])
-            # data['bka323'] = float(cdf.loc[x].values[8])
-            # data['fka31b'] = float(cdf.loc[x].values[9])
-            # data['fka21b'] = float(cdf.loc[x].values[10])
-            # data['fka311'] = float(cdf.loc[x].values[11])
-            # data['bka311'] = float(cdf.loc[x].values[12])
-            # data['fkr311'] = float(cdf.loc[x].values[13])
-            # data['bkr311'] = float(cdf.loc[x].values[14])
-            # data['fka321'] = float(cdf.loc[x].values[15])
-            # data['bka321'] = float(cdf.loc[x].values[16])
-            # data['fkr321'] = float(cdf.loc[x].values[17])
-            # data['bkr321'] = float(cdf.loc[x].values[18])
-            # data['bka111'] = float(cdf.loc[x].values[19])
-            # data['fka111'] = float(cdf.loc[x].values[20])
-        else:
-            if pd.isnull(cdf.loc[x].values[1]):
-                # if cdf.loc[x].values[0] >= datetime.now():
-                break  # 如果读到的数据不是浮点数类型，那么停止
-            data['date'] = cdf.loc[x].values[0]
-            data['fka312'] = float(cdf.loc[x].values[1])
-            data['bka312'] = float(cdf.loc[x].values[2])
-            data['fka313'] = float(cdf.loc[x].values[3])
-            data['bka313'] = float(cdf.loc[x].values[4])
-            data['fka322'] = float(cdf.loc[x].values[5])
-            data['bka322'] = float(cdf.loc[x].values[6])
-            data['fka323'] = float(cdf.loc[x].values[7])
-            data['bka323'] = float(cdf.loc[x].values[8])
-            data['fka31b'] = float(cdf.loc[x].values[9])
-            data['fka21b'] = float(cdf.loc[x].values[10])
-            data['fka311'] = float(cdf.loc[x].values[11])
-            data['bka311'] = float(cdf.loc[x].values[12])
-            data['fkr311'] = float(cdf.loc[x].values[13])
-            data['bkr311'] = float(cdf.loc[x].values[14])
-            data['fka321'] = float(cdf.loc[x].values[15])
-            data['bka321'] = float(cdf.loc[x].values[16])
-            data['fkr321'] = float(cdf.loc[x].values[17])
-            data['bkr321'] = float(cdf.loc[x].values[18])
-            data['bka111'] = float(cdf.loc[x].values[19])
-            data['fka111'] = float(cdf.loc[x].values[20])
-            data['dgp1'] = cdf.loc[x].values[21]
-            data['donp1'] = cdf.loc[x].values[22]
-            data['doffp1'] = cdf.loc[x].values[23]
-            data['dcp1'] = cdf.loc[x].values[24]
-            data['dcl1'] = cdf.loc[x].values[25]
-            data['dgp2'] = cdf.loc[x].values[26]
-            data['donp2'] = cdf.loc[x].values[27]
-            data['doffp2'] = cdf.loc[x].values[28]
-            data['dcp2'] = cdf.loc[x].values[29]
-            data['dcl2'] = cdf.loc[x].values[30]
-            data['dgp'] = cdf.loc[x].values[31]
-            data['donp'] = cdf.loc[x].values[32]
-            data['doffp'] = cdf.loc[x].values[33]
-            data['dcp'] = cdf.loc[x].values[34]
-            data['dcl'] = cdf.loc[x].values[35]
-            data['doffp31b'] = cdf.loc[x].values[36]
-            data['doffp21b'] = cdf.loc[x].values[37]
-            data['agp1'] = cdf.loc[x].values[38]
-            data['aonp1'] = cdf.loc[x].values[39]
-            data['aoffp1'] = cdf.loc[x].values[40]
-            data['acp1'] = cdf.loc[x].values[41]
-            data['acl1'] = cdf.loc[x].values[42]
-            data['agp2'] = cdf.loc[x].values[43]
-            data['aonp2'] = cdf.loc[x].values[44]
-            data['aoffp2'] = cdf.loc[x].values[45]
-            data['acp2'] = cdf.loc[x].values[46]
-            data['acl2'] = cdf.loc[x].values[47]
-            data['agp'] = cdf.loc[x].values[48]
-            data['aonp'] = cdf.loc[x].values[49]
-            data['aoffp'] = cdf.loc[x].values[50]
-            data['acp'] = cdf.loc[x].values[51]
-            data['acl'] = cdf.loc[x].values[52]
-            data['mgp1'] = cdf.loc[x].values[53]
-            data['monp1'] = cdf.loc[x].values[54]
-            data['moffp1'] = cdf.loc[x].values[55]
-            data['mcp1'] = cdf.loc[x].values[56]
-            data['mcl1'] = cdf.loc[x].values[57]
-            data['mgp2'] = cdf.loc[x].values[58]
-            data['monp2'] = cdf.loc[x].values[59]
-            data['moffp2'] = cdf.loc[x].values[60]
-            data['mcp2'] = cdf.loc[x].values[61]
-            data['mcl2'] = cdf.loc[x].values[62]
-            data['mgp'] = cdf.loc[x].values[63]
-            data['monp'] = cdf.loc[x].values[64]
-            data['moffp'] = cdf.loc[x].values[65]
-            data['mcp'] = cdf.loc[x].values[66]
-            data['mcl'] = cdf.loc[x].values[67]
-            data['offja311'] = cdf.loc[x].values[69]
-            data['offjr311'] = cdf.loc[x].values[71]
-            data['offja321'] = cdf.loc[x].values[73]
-            data['offjr321'] = cdf.loc[x].values[75]
-            data['davgs1'] = float(ty.loc[x - 1].values[1])
-            data['davgs2'] = float(ty.loc[x - 1].values[2])
-            data['davgs'] = float(Utils.realRound((data['davgs1'] + data['davgs2']) / 2, 2))
         if CalDailyForm().getOne(CalDailyForm,
-                                 {CalDailyForm.date == cdf.loc[x + 1].values[0] + datetime.timedelta(-1)}):
-            # continue  # 如果数据库存在本日数据，那么跳过
-            CalDailyForm().edit(CalDailyForm, data,
-                                {CalDailyForm.date == cdf.loc[x + 1].values[0] + datetime.timedelta(-1)})
+                                 {CalDailyForm.date == cdf.loc[x].values[0]}):
+            # 如果数据库存在本日数据，更新数据
+            CalDailyForm().update(data,
+                                  {
+                                      CalDailyForm.date == cdf.loc[x].values[0]
+                                  }
+                                  )
         else:
             CalDailyForm().add(data)
-    return BaseController().successData(result=response, msg='日报表数据更新成功')
+    return BaseController().successData(result=response, msg='日报表数据更新成功！')
+
+
+def import_dlfs(dlfs_file, year, types='insert'):
+    """
+    自动化对每日电量风速统计表进行读取同步
+    dlfs_file: 风机电量风速文件
+    year: 数据年份
+    types: insert 插入模式 / overwrite 覆盖模式
+    """
+    if str(year) in config.keys():
+        cfg_dlfs = config[str(year)]['dlfs']
+    else:
+        cfg_dlfs = config['default']['dlfs']
+    dlfs = pd.read_excel(dlfs_file if dlfs_file else os.path.join(cfg_dlfs['dir'], cfg_dlfs['name']),
+                         sheet_name=cfg_dlfs['sheet0']['name'],
+                         usecols=range(column_index_from_string(cfg_dlfs['sheet0']['end_col'])),
+                         skiprows=range(cfg_dlfs['sheet0']['start_row'] - 1),
+                         header=None
+                         ).fillna(0)
+    response = []
+    for x in range(366):
+        if types == 'insert' and CalDailyForm.query.filter_by(
+                date=dlfs.loc[x].values[0]).first():
+            continue  # 如果数据库存在本日数据，那么跳过
+        data = {
+            'davgs1': float(dlfs.loc[x].values[1]),
+            'davgs2': float(dlfs.loc[x].values[2]),
+            'davgs': float(Utils.realRound((float(dlfs.loc[x].values[1]) + float(dlfs.loc[x].values[2])) / 2, 2))
+        }
+        if pd.isnull(dlfs.loc[x].values[1]):
+            # if cdf.loc[x].values[0] >= datetime.now():
+            break  # 如果读到的数据不是浮点数类型，那么停止，用于判断是否到达表内空行
+        if CalDailyForm().getOne(CalDailyForm,
+                                 {CalDailyForm.date == dlfs.loc[x].values[0]}):
+            CalDailyForm().edit(CalDailyForm, data,
+                                {CalDailyForm.date == dlfs.loc[x].values[0]})
+        else:
+            CalDailyForm().add(data)
+    return BaseController().successData(result=response, msg='风速数据更新成功！')
 
 
 @app.route('/api/cdf', methods=['GET'])

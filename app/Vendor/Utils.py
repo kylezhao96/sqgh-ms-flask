@@ -2,7 +2,6 @@
     date:2018.5.9
     工具类，封装一些通用方法
 """
-from app.env import ALLOWED_EXTENSIONS
 from app.Vendor.Code import Code
 import time
 from decimal import Decimal, ROUND_HALF_UP
@@ -25,6 +24,22 @@ validation = {
     'password': '密码'
 }
 
+
+def dict_merge(dict_1, dict_2):
+    """
+    @param dict_1 基础dict
+    @param dict_2 需要更改数据
+    @return 合并后数据
+    """
+    dict_merged = dict_1.copy()
+    for key in dict_2.keys():
+        if key not in dict_1.keys():
+            dict_merged[key] = dict_2[key]
+        elif type(dict_1[key]) != dict:
+            dict_merged[key] = dict_2[key]
+        else:
+            dict_merged[key] = dict_merge(dict_1[key], dict_2[key])
+    return dict_merged
 
 class Utils:
     """
@@ -72,14 +87,14 @@ class Utils:
         return string path
     """
 
-    @staticmethod
-    def allowed_file(filename):
-        return '.' in filename and \
-               filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
-
-    """ uuid,唯一id 
-        return string id
-    """
+    # @staticmethod
+    # def allowed_file(filename):
+    #     return '.' in filename and \
+    #            filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+    #
+    # """ uuid,唯一id
+    #     return string id
+    # """
 
     @staticmethod
     def unique_id(prefix=''):
@@ -129,3 +144,4 @@ class Utils:
             format = format + '0'
             n = n - 1
         return Decimal(str(d)).quantize(Decimal(format), rounding=ROUND_HALF_UP)
+

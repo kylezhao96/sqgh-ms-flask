@@ -57,7 +57,6 @@ class Gzp(db.Model, BaseModel, SerializerMixin):
     wts = db.relationship("WT", secondary=wt_gzp, backref=db.backref('gzps', lazy='dynamic'),
                           lazy="dynamic")  # 风机号
 
-
     def to_dict(self, only=()):
         resp_dict = {
             'id': self.id,
@@ -192,10 +191,6 @@ class Gzp(db.Model, BaseModel, SerializerMixin):
     def add(self, gzp):
         db.session.add(gzp)
         return True
-
-    # 更新工作票
-    def update(self):
-        return db.session.commit()
 
     # 根据id删除工作票
     def delete(self, gzp_id):

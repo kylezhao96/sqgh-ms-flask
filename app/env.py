@@ -5,6 +5,9 @@
 @LastEditors: hua
 @LastEditTime: 2019-11-28 20:05:49
 """
+import os
+from app.Vendor.Utils import dict_merge
+import yaml
 
 # debug
 DEBUG_LOG = True
@@ -13,7 +16,7 @@ SAVE_LOG = 1
 # upload
 UPLOAD_FOLDER = '/uploads/'  # 允许目录
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 允许大小16MB
-ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])  # 允许文件
+# ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])  # 允许文件
 
 # 相关文件目录
 YEAR = '2020'
@@ -23,6 +26,36 @@ TY_PATH = DESK_PATH + r"\1报表文件夹\每日00：30前石桥风电场每日�
           r"年\石桥风电场报送每日风机电量风速统计表" + YEAR + r".xlsx"
 EXCEL_PATH = DESK_PATH + r"\1报表文件夹\日报表\\" + YEAR + r"年\\" + YEAR + r"年石桥风电场日报表.xlsx"
 driverLoc = r"D:\submitTable\driver\IEDriverServer.exe"
+
+
+def yaml_to_dict(dir):
+    # yaml文件转为dict
+    with open(dir) as f:
+        res = yaml.safe_load(f)
+    return res
+
+
+config = {
+
+}
+
+for x in os.listdir('app/Config'):
+    config[x[:-5]] = yaml_to_dict('app/Config/' + x)
+    if x == 'defalut.yaml':
+        cfg_mysql = config[x[:-5]]['mysql']
+        cfg_mysql['SQLALCHEMY_DATABASE_URI'] = '{}+{}://{}:{}@{}:{}/{}?charset=utf8'.format(
+            cfg_mysql['DIALECT'],
+            cfg_mysql['DRIVER'],
+            cfg_mysql['USERNAME'],
+            cfg_mysql['PASSWORD'],
+            cfg_mysql['HOST'],
+            cfg_mysql['PORT'],
+            cfg_mysql['DATABASE']
+        )
+for key, value in config.items():
+    if key != 'dafault':
+        config[key] = dict_merge(config['default'], config[key])
+
 
 
 # mysql
@@ -49,7 +82,3 @@ class Config(object):
 
     SQLALCHEMY_POOL_SIZE = 10
     SQLALCHEMY_MAX_OVERFLOW = 5
-
-
-
-

@@ -115,11 +115,12 @@ class BaseModel:
     def edit(self, cls_: object, data: dict, filters: set) -> bool:
         """
         修改
-        @param object cls_ 数据库模型实体类
-        @param dict data 数据
-        @param set filters 条件
+        @param filters: set 条件
+        @param data: dict 数据
+        @param cls_: object 数据库模型实体类
         @return bool
         """
+        print(data)
         return db.session.query(cls_).filter(*filters).update(data, synchronize_session=False)
 
     def delete(self, cls_: object, filters: set) -> int:

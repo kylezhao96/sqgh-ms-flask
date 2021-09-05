@@ -120,10 +120,10 @@ class CalDailyForm(db.Model, BaseModel, SerializerMixin):
     # l 负荷
     dmaxl = db.Column(db.Float)  # 日最大负荷
     dminl = db.Column(db.Float)  # 日最小负荷
+
     def getNew(self):
         data = db.session.query(CalDailyForm).order_by(CalDailyForm.id.desc()).first().to_dict()
         return data
-
 
     def getOneByDate(self, date):
         filters = {
@@ -169,3 +169,9 @@ class CalDailyForm(db.Model, BaseModel, SerializerMixin):
         cdf = CalDailyForm(**cdf_dict)
         db.session.add(cdf)
         return True
+
+    # 更新工作票
+    @classTransaction
+    def update(self, data, filters):
+        print(data)
+        return db.session.query(CalDailyForm).filter(*filters).update(data, synchronize_session=False)
