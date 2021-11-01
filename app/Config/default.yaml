@@ -20,7 +20,7 @@ rbb:
     end_row: 371
     start_col: A
     end_col: BX
-    skip_row: null
+    skip_row: []
     merge_row: []
     date_col: A
     fka_312_col: B
@@ -161,6 +161,7 @@ dlfs:
   sheet1: 
     name: 风速统计
     start_row: 3
+    end_row: 367
     start_col: A
     end_col: C
     date_col: A

@@ -78,7 +78,8 @@ def import_cdf(rbb_file='', year=2021, types='overwrite'):
         if pd.isnull(cdf.loc[x].values[1]):
             # if cdf.loc[x].values[0] >= datetime.now():
             break  # 如果读到的数据不是浮点数类型，那么停止，用于判断是否到达表内空行
-        # cdf_db = CalDailyForm.query.filter_by(date=cdf.loc[x + 1].values[0] + datetime.timedelta(-1)).first()
+        if x + rbjsb_sheet['start_row'] - rbjsb_sheet['start_row'] in rbjsb_sheet['skip_row']:
+            continue  # 如果该行为cfg文件中定义的跳过行，那么跳过
         data = {'date': cdf.loc[x].values[column_index_from_string(rbjsb_sheet['date_col']) - 1],
                 'fka312': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['fka_312_col']) - 1]),
                 'bka312': float(cdf.loc[x].values[column_index_from_string(rbjsb_sheet['bka_312_col']) - 1]),
@@ -318,7 +319,7 @@ def import_cdf(rbb_file='', year=2021, types='overwrite'):
                     column_index_from_string(rbjsb_sheet['doffjr_321_col']) - 1], merge_row))
                 break
         if continue_flag == 1:
-            # 出发flag，本次循环结束，不需要执行事务
+            # 触发flag，本次循环结束，不需要执行数据库事务
             continue
         if CalDailyForm().getOne(CalDailyForm,
                                  {CalDailyForm.date == cdf.loc[x].values[0]}):
@@ -329,11 +330,13 @@ def import_cdf(rbb_file='', year=2021, types='overwrite'):
                                   }
                                   )
         else:
+            # 如果数据库中无本日数据，新增
             CalDailyForm().add(data)
     return BaseController().successData(result=response, msg='日报表数据更新成功！')
 
 
-def import_dlfs(dlfs_file, year, types='insert'):
+@app.route('/api/syn/dlfs', methods=['GET'])
+def import_dlfs(dlfs_file='', year=2021, types='overwrite'):
     """
     自动化对每日电量风速统计表进行读取同步
     dlfs_file: 风机电量风速文件
@@ -345,28 +348,28 @@ def import_dlfs(dlfs_file, year, types='insert'):
     else:
         cfg_dlfs = config['default']['dlfs']
     dlfs = pd.read_excel(dlfs_file if dlfs_file else os.path.join(cfg_dlfs['dir'], cfg_dlfs['name']),
-                         sheet_name=cfg_dlfs['sheet0']['name'],
-                         usecols=range(column_index_from_string(cfg_dlfs['sheet0']['end_col'])),
-                         skiprows=range(cfg_dlfs['sheet0']['start_row'] - 1),
+                         sheet_name=cfg_dlfs['sheet1']['name'],
+                         usecols=range(column_index_from_string(cfg_dlfs['sheet1']['end_col'])),
+                         skiprows=range(cfg_dlfs['sheet1']['start_row'] - 1),
                          header=None
-                         ).fillna(0)
+                         )
     response = []
-    for x in range(366):
-        if types == 'insert' and CalDailyForm.query.filter_by(
-                date=dlfs.loc[x].values[0]).first():
+    for x in range(cfg_dlfs['sheet1']['end_row'] - cfg_dlfs['sheet1']['start_row']):
+        date = dlfs.loc[x].values[column_index_from_string(cfg_dlfs['sheet1']['date_col']) - 1].replace(year=year)
+        if types == 'insert' and CalDailyForm.query.filter_by(date=date).first():
             continue  # 如果数据库存在本日数据，那么跳过
-        data = {
-            'davgs1': float(dlfs.loc[x].values[1]),
-            'davgs2': float(dlfs.loc[x].values[2]),
-            'davgs': float(Utils.realRound((float(dlfs.loc[x].values[1]) + float(dlfs.loc[x].values[2])) / 2, 2))
-        }
         if pd.isnull(dlfs.loc[x].values[1]):
             # if cdf.loc[x].values[0] >= datetime.now():
             break  # 如果读到的数据不是浮点数类型，那么停止，用于判断是否到达表内空行
-        if CalDailyForm().getOne(CalDailyForm,
-                                 {CalDailyForm.date == dlfs.loc[x].values[0]}):
-            CalDailyForm().edit(CalDailyForm, data,
-                                {CalDailyForm.date == dlfs.loc[x].values[0]})
+        data = {
+            'date': date,
+            'davgs1': float(dlfs.loc[x].values[column_index_from_string(cfg_dlfs['sheet1']['wind_speed_1_col']) - 1]),
+            'davgs2': float(dlfs.loc[x].values[column_index_from_string(cfg_dlfs['sheet1']['wind_speed_2_col']) - 1])
+        }
+        data['davgs'] = float(Utils.realRound((data['davgs1'] + data['davgs2']) / 2, 2))
+        print(data)
+        if CalDailyForm().getOne(CalDailyForm, {CalDailyForm.date == date}):
+            CalDailyForm().edit(CalDailyForm, data, {CalDailyForm.date == date})
         else:
             CalDailyForm().add(data)
     return BaseController().successData(result=response, msg='风速数据更新成功！')
