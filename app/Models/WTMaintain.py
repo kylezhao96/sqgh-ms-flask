@@ -13,6 +13,7 @@ from sqlalchemy_serializer import SerializerMixin
 from app.Models.BaseModel import BaseModel
 from app import db
 from app.Models.Model import statistics_wtm
+from app.Vendor.Decorator import classTransaction
 
 
 class WTMaintain(db.Model, BaseModel, SerializerMixin):
@@ -34,3 +35,9 @@ class WTMaintain(db.Model, BaseModel, SerializerMixin):
     def getWtmList(self, page, per_page):
         data = self.getList(WTMaintain, {}, "id desc", (), page, per_page)
         return data
+
+    @classTransaction
+    def add(self, dict):
+        cdf = WTMaintain(**dict)
+        db.session.add(cdf)
+        return True

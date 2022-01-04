@@ -17,6 +17,16 @@ from app.Controllers.BaseController import BaseController
 from app import api
 
 
+# 测试
+@api.route('/imp/test', methods=['GET'])
+def test():
+    print('开始执行-----')
+    trans_rbb_file(r'/Users/kyle/Desktop/2021年石桥风电场日报表(5月27日换表后).xlsx',
+                   datetime.datetime.strptime('2021-8', '%Y-%m'),
+                   '/Users/kyle/Desktop/test',
+                   os.path.join('template', 'imp', 'template'))
+
+
 # 上传（集成解压和压缩功能）
 @api.route('/imp/upload', methods=['POST'])
 def get_wt_data():
@@ -43,7 +53,7 @@ def get_wt_data():
     trans_cft_files(cft_file, file_date, exp_path, temp_path)
     trans_rbb_file(rbb_file, file_date, exp_path, temp_path)
     # 打包
-    exp_file_name = '智慧风电数据.zip'
+    exp_file_name = '智慧风电数据' + file_month + '.zip'
     compress_files(exp_path, exp_file_name)
     response = make_response(
         send_from_directory(os.path.abspath(exp_path), exp_file_name, as_attachment=True))
@@ -245,7 +255,7 @@ def trans_gz_files(file, file_date, exp_path, temp_path):
     row_num = 2
     for row in gz_df.values:
         if file_date <= datetime.datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S') < file_date + relativedelta(months=+1):
-            ws_copy.write(row_num, 0, transDoubleId(row[5]))
+            ws_copy.write(row_num, 0, trans_double_id(row[5]))
             ws_copy.write(row_num, 1, datetime.datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d '
                                                                                                        '%H:%M:%S'))
             ws_copy.write(row_num, 2, datetime.datetime.strptime(row[2], '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%d '
@@ -296,7 +306,7 @@ def trans_cft_files(file, file_date, exp_path, temp_path):
     wb_cft.save(exp_file)
 
 
-def transDoubleId(wt_id):
+def trans_double_id(wt_id):
     """
     :param wt_id: string 风机号
     :return: wt_double_id 双重编号
@@ -364,7 +374,7 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
             try:
                 # row_date = datetime.datetime.strptime(row[3], '%Y/%m/%d %H:%M')
                 if file_date <= row[3] < file_date + relativedelta(months=+1):
-                    ws_copy_wh.write(row_num, 0, transDoubleId(row[0].strip()[0:3]))
+                    ws_copy_wh.write(row_num, 0, trans_double_id(row[0].strip()[0:3]))
                     ws_copy_wh.write(row_num, 1, row[3].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 2, row[4].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 3, row[2])
@@ -382,7 +392,7 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
             try:
                 # row_date = datetime.datetime.strptime(row[3], '%Y/%m/%d %H:%M')
                 if file_date <= row[3] < file_date + relativedelta(months=+1):
-                    ws_copy_wh.write(row_num, 0, transDoubleId(row[0].strip()[6:-1]))
+                    ws_copy_wh.write(row_num, 0, trans_double_id(row[0].strip()[6:-1]))
                     ws_copy_wh.write(row_num, 1, row[3].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 2, row[4].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 3, row[2])
@@ -400,7 +410,7 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
             try:
                 # row_date = datetime.datetime.strptime(row[11], '%Y/%m/%d %H:%M')
                 if file_date <= row[11] < file_date + relativedelta(months=+1):
-                    ws_copy_wh.write(row_num, 0, transDoubleId(row[8].strip()[0:3]))
+                    ws_copy_wh.write(row_num, 0, trans_double_id(row[8].strip()[0:3]))
                     ws_copy_wh.write(row_num, 1, row[11].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 2, row[12].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 3, row[10])
@@ -418,7 +428,7 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
             try:
                 # row_date = datetime.datetime.strptime(row[11], '%Y/%m/%d %H:%M')
                 if file_date <= row[11] < file_date + relativedelta(months=+1):
-                    ws_copy_wh.write(row_num, 0, transDoubleId(row[8].strip()[6:-1]))
+                    ws_copy_wh.write(row_num, 0, trans_double_id(row[8].strip()[6:-1]))
                     ws_copy_wh.write(row_num, 1, row[11].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 2, row[12].strftime('%Y-%m-%d %H:%M:%S'))
                     ws_copy_wh.write(row_num, 3, row[10])
@@ -431,6 +441,64 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
                 print(row[3])
                 print(row[8])
                 print(row[11])
+                continue
+    # 写入输变电维护记录
+    cdf_sbd_wh = pd.read_excel(file, sheet_name='输变电故障、维护统计', header=None)
+    for row in cdf_sbd_wh.values:
+        # 先统计一期
+        if str(row[0]).strip() in ['全场停电', '全厂停电', '#1集电线路、#2集电线路', '#1集电线路', '#2集电线路']:
+            try:
+                # 全场停电情况
+                if str(row[0]).strip() in ['全场停电', '全厂停电', '#1集电线路、#2集电线路']:
+                    wt_range = range(1, 21)
+                # #1线
+                elif str(row[0]).strip() == '#1集电线路':
+                    wt_range = range(1, 11)
+                # #2线
+                elif str(row[0]).strip() == '#2集电线路':
+                    wt_range = range(11, 21)
+                if file_date <= row[3] < file_date + relativedelta(months=+1):
+                    for wid in wt_range:
+                        ws_copy_wh.write(row_num, 0, trans_double_id('A' + str(wid)))
+                        ws_copy_wh.write(row_num, 1, row[3].strftime('%Y-%m-%d %H:%M:%S'))
+                        ws_copy_wh.write(row_num, 2, row[4].strftime('%Y-%m-%d %H:%M:%S'))
+                        ws_copy_wh.write(row_num, 3, row[0] + row[1])
+                        row_num = row_num + 1
+                elif row[3] >= file_date + relativedelta(months=+1):
+                    break
+            except Exception as e:
+                print(e)
+                print(row[0])
+                print(row[3])
+                print(row[4])
+                continue
+        # 统计二期
+        if str(row[8]).strip() in ['全场停电', '全厂停电', '#3集电线路、#4集电线路', '#3集电线路', '#4集电线路']:
+            # 全场停电情况
+            try:
+                # 全场停电情况
+                if str(row[8]).strip() in ['全场停电', '全厂停电', '#3集电线路、#4集电线路']:
+                    wt_range = range(21, 41)
+                # #1线
+                elif str(row[8]).strip() == '#3集电线路':
+                    wt_range = range(21, 31)
+                # #2线
+                elif str(row[8]).strip() == '#4集电线路':
+                    wt_range = range(31, 41)
+                if file_date <= row[11] < file_date + relativedelta(months=+1):
+                    for wid in wt_range:
+                        ws_copy_wh.write(row_num, 0, trans_double_id('A' + str(wid)))
+                        ws_copy_wh.write(row_num, 1, row[11].strftime('%Y-%m-%d %H:%M:%S'))
+                        ws_copy_wh.write(row_num, 2, row[12].strftime('%Y-%m-%d %H:%M:%S'))
+                        ws_copy_wh.write(row_num, 3, row[8] + row[9])
+                        row_num = row_num + 1
+                elif row[11] >= file_date + relativedelta(months=+1):
+                    break
+            except Exception as e:
+                print(e)
+                print(row[8])
+                print(row[11])
+                print(row[12])
                 continue
     wb_copy_wh.save(exp_tj_file)
     # 写入限电数据
@@ -451,10 +519,10 @@ def trans_rbb_file(file, file_date, exp_path, temp_path):
                             continue
                         elif id == 28:
                             continue
-                        elif id == 29:
+                        elif id == 38:
                             continue
                         wt_id = 'A' + str(id + 1).zfill(2)
-                        ws_copy_xd.write(row_num, 0, transDoubleId(wt_id))
+                        ws_copy_xd.write(row_num, 0, trans_double_id(wt_id))
                         ws_copy_xd.write(row_num, 1, row[4].strftime('%Y-%m-%d %H:%M:%S'))
                         ws_copy_xd.write(row_num, 2, row[5].strftime('%Y-%m-%d %H:%M:%S'))
                         ws_copy_xd.write(row_num, 3, '电网限电')

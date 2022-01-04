@@ -30,7 +30,7 @@ def basic_data_upload():
                                                                                         'endMonth'] != '' else ''
     rbb_file = request.files['rbbFile']  # 日报表数据
     dlfs_file = request.files['dlfsFile']  # 风机电量风速统计表
-    import_cdf(rbb_file, dlfs_file, start_month.year)
+    # import_cdf(rbb_file, dlfs_file, start_month.year)
 
 
 @app.route('/api/cdfs', methods=['PUT'])
@@ -50,10 +50,10 @@ def syn_cdf():
     # import_cdf(rbb_dir, dlfs_dir)
 
 
-@app.route('/api/syn/cdf', methods=['GET'])
-def import_cdf(rbb_file='', year=2021, types='overwrite'):
+@app.route('/api/syn/cdf/rbjsb', methods=['GET'])
+def import_cdf_rbjsb(rbb_file='', year=2021, types='insert'):
     """
-    自动化对日报表进行读取同步
+    自动化对日报表(日报计算表)进行读取同步
     rbb_file: 日报表文件
     year: 数据年份
     type: insert 插入模式 / overwrite 覆盖模式
@@ -64,6 +64,7 @@ def import_cdf(rbb_file='', year=2021, types='overwrite'):
         cfg_rbb = config['default']['rbb']
     print(cfg_rbb)
     rbjsb_sheet = cfg_rbb['sheet0']
+    # 日报计算表
     cdf = pd.read_excel(rbb_file if rbb_file else os.path.join(cfg_rbb['dir'], cfg_rbb['name']),
                         sheet_name=rbjsb_sheet['name'],
                         usecols=range(column_index_from_string(rbjsb_sheet['end_col'])),
@@ -335,6 +336,33 @@ def import_cdf(rbb_file='', year=2021, types='overwrite'):
     return BaseController().successData(result=response, msg='日报表数据更新成功！')
 
 
+# TODO
+@app.route('/api/syn/cdf/fjwh', methods=['GET'])
+def import_cdf_fjwh(rbb_file='', year=2021):
+    """
+    自动化对日报表(风机维护统计)进行读取同步
+    rbb_file: 日报表文件
+    year: 数据年份
+    type: insert 插入模式 / overwrite 覆盖模式
+    """
+    if str(year) in config.keys():
+        cfg_rbb = config[str(year)]['rbb']
+    else:
+        cfg_rbb = config['default']['rbb']
+    print(cfg_rbb)
+    fjwh_sheet = cfg_rbb['sheet1']
+    # 风机维护统计表
+    cdf = pd.read_excel(rbb_file if rbb_file else os.path.join(cfg_rbb['dir'], cfg_rbb['name']),
+                        sheet_name=fjwh_sheet['name'],
+                        usecols=range(column_index_from_string(fjwh_sheet['wtm_lost_power_2_col'])),
+                        header=None
+                        )
+    response = []
+    for x in range(cdf.shape[0]):
+        pass
+#         TODO
+
+
 @app.route('/api/syn/dlfs', methods=['GET'])
 def import_dlfs(dlfs_file='', year=2021, types='overwrite'):
     """
@@ -444,3 +472,27 @@ def get_gp_plans():
                 gpp = GpPlan(year=year, month=col_num, num=2, plan_gp=int(gpplan.loc[x].values[col_num]))
                 GpPlan().add(gpp)
     return BaseController().successData(msg='读取并写入成功！')
+
+
+def cdf_to_gdr(date):
+    """
+    将日报表转换为集团日报
+    @date:仅允许 datetime.date 类型或 yyyy-mm-dd 格式字符串
+    """
+    if type(date) == str:
+        try:
+            date = datetime.datetimed.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("错误是日期格式或日期,格式是年-月-日")
+            return False
+    if str(date.year) in config.keys():
+        cfg_gdr = config[str(date.year)]['gdr']
+    else:
+        cfg_gdr = config['default']['gdr']
+    cfg_sheet0 = cfg_gdr['sheet0']
+    cdf = pd.read_excel(os.path.join(cfg_gdr['dir'], cfg_gdr['name']),
+                        sheet_name=cfg_sheet0['name'],
+                        usecols=range(column_index_from_string(cfg_sheet0['rglyc_col'])),
+                        header=None
+                        )
+    response = []

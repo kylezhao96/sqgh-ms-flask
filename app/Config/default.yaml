@@ -99,7 +99,7 @@ rbb:
     donjr_321_col: BW
     doffjr_321_col: BX
   sheet1: 
-    sheet_name: 风机维护统计
+    name: 风机维护统计
     skip_1_row: null
     wt_id_1_col: A
     wtm_type_1_col: B
@@ -117,7 +117,7 @@ rbb:
     wtm_time_2_col: N
     wtm_lost_power_2_col: O
   sheet2: 
-    sheet_name: 风机故障统计
+    name: 风机故障统计
     skip_1_row: null
     wt_id_1_col: A
     err_code_1_col: B
@@ -138,6 +138,22 @@ rbb:
     err_time_2_col: Q
     err_lost_power_2_col: R
     err_approach_2_col: S
+  sheet3:
+    name: 输变电故障、维护统计
+    range_1_col: A
+    content_1_col: B
+    process_1_col: C
+    start_time_1_col: D
+    stop_time_1_col: E
+    time_1_col: F
+    lost_power_1_col: G
+    range_2_col: I
+    content_2_col: J
+    process_2_col: K
+    start_time_2_col: L
+    stop_time_2_col: M
+    time_2_col: N
+    lost_power_2_col: O
   sheet4: 
     sheet_name: 电网故障、检修、限电统计
     range_1_col: A
@@ -167,3 +183,83 @@ dlfs:
     date_col: A
     wind_speed_1_col: B
     wind_speed_2_col: C
+gdr:
+  dir: /Users/kyle/Desktop
+  name: 生产运行情况日报表-temp.xlsx
+  sheet0:
+    name: 发电生产情况日报（风电）
+#    运行容量
+    yxrl_row: 13
+    yxrl_col: F
+#    检修容量
+    jxrl_row: 13
+    jxrl_col: G
+#    备用容量
+    byrl_row: 13
+    byrl_col: H
+#    临检容量
+    ljrl_row: 13
+    ljrl_col: I
+#    新增容量
+    xzrl_row: 13
+    xzrl_col: J
+#    发电量
+    fdl_row: 13
+    fdl_col: K
+#    试运行发电量
+    syxfdl_row: 13
+    syxfdl_col: L
+#    综合厂用电量
+    zhcydl_row: 13
+    zhcydl_col: N
+#    发电厂用电量
+    fdcydl_row: 13
+    fdcydl_col: P
+#    上网电量-合计
+    swdl_hj_row: 13
+    swdl_hj_col: R
+#    上网电量-基数外
+    swdl_jsw_row: 12
+    swdl_jsw_col: T
+#    被替代售电量
+    btdsdl_row: 12
+    btdsdl_col: U
+#    网购电量
+    wgdl_row: 12
+    wgdl_col: V
+#    平均风速
+    pjfs_row: 13
+    pjfs_col: W
+#     限电量
+    xdl_row: 13
+    xdl_col: X
+#    上网电价-基数内
+    swdj_jsn_row: 12
+    swdj_jsn_col: AA
+#    上网电价-基数外
+    swdj_jsw_row: 12
+    swdj_jsw_col: AB
+#    被替代售电价
+    btdsdj_row: 12
+    btdsdj_col: AC
+#    购电单价
+    gddj_row: 12
+    gddj_col: AD
+#    可用小时
+    kyxs_row: 13
+    kyxs_col: AE
+#    计划停运小时
+    jhtyxs_row: 13
+    jhtyxs_col: AG
+#    非计划停运小时
+    fjhtyxs_row: 13
+    fjhtyxs_col: AH
+#    非计划损失电量
+    fjhssdl_row: 13
+    fjhssdl_col: AI
+#    平均风速预测
+    pjfsyc_row: 13
+    pjfsyc_col: AK
+#    日功率预测
+    rglyc_row: 13
+    rglyc_col: AL
